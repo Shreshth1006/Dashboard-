@@ -4,8 +4,7 @@ import json
 import time
 import random
 from datetime import datetime, timedelta
-from scrapfly import ScrapflyClient
-from scrapfly.scrape_config import ScrapeConfig
+from scrapfly import ScrapflyClient, ScrapeConfig
 from supabase import create_client
 from dotenv import load_dotenv
 
