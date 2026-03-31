@@ -23,8 +23,6 @@ logger = logging.getLogger(__name__)
 
 APP_TITLE = "Instagram Analytics"
 APP_SUBTITLE = "Channel Performance Dashboard"
-CSV_FILE = "/Users/shreshthsharma1006/Documents/instascraper/instascraper.csv"
-CATEGORY_CSV = "/Users/shreshthsharma1006/Documents/instascraper/instascraper_categorized.csv"
 
 LOGO_DIR = "images"
 
@@ -264,16 +262,11 @@ def load_data(_):
 
 def preprocess(df):
     df = df.copy()
-    
-    # CSV already has: username, followers, post_link, media_url,
-    #                  post_time, caption, hashtags, likes, comments
-    # No renaming needed — just clean and type-cast.
 
     df["username"] = df["username"].astype(str)
     df["likes"]    = pd.to_numeric(df["likes"],    errors="coerce").fillna(0).astype(int)
     df["comments"] = pd.to_numeric(df["comments"], errors="coerce").fillna(0).astype(int)
 
-    # Clean media_url — replace blanks / 0 / nan with None
     if "media_url" in df.columns:
         df["media_url"] = df["media_url"].apply(
             lambda x: html.unescape(str(x).strip())
@@ -281,15 +274,10 @@ def preprocess(df):
             else None
         )
 
-    # Parse datetime
     df["posted_at_dt"] = pd.to_datetime(df["post_time"], errors="coerce")
-
-# 🔥 DROP invalid dates (VERY IMPORTANT)
     df = df.dropna(subset=["posted_at_dt"])
-
     df["post_date"] = df["posted_at_dt"].dt.date
 
-    # Create post_id from post_link
     if "post_link" in df.columns:
         df["post_id"] = df["post_link"].apply(
             lambda x: x.split("/")[-2] if pd.notna(x) and "/" in str(x) else ""
@@ -317,27 +305,11 @@ def filter_by_date(df, start, end):
 # -----------------------
 @st.cache_data(ttl=3600)
 def get_logo_path(username):
-    """Return local file path for the channel logo, or None if not found."""
     filename = LOGO_MAP.get(username)
     if not filename:
         return None
     path = os.path.join(LOGO_DIR, filename)
     return path if os.path.exists(path) else None
-
-# -----------------------
-# Components
-# -----------------------
-def render_account_card(username, posts, likes):
-    """Render account card HTML (no logo inside HTML)."""
-    return f"""
-    <div class="account-card">
-        <div class="account-username">@{username}</div>
-        <div class="account-stats">
-            <span>{posts} posts</span>
-            <span>{format_number(likes)} likes</span>
-        </div>
-    </div>
-    """
 
 # -----------------------
 # Views
@@ -352,7 +324,6 @@ def render_accounts(df):
     stats.columns = ['username', 'posts', 'total_likes']
     stats = stats.sort_values('total_likes', ascending=False).reset_index(drop=True)
 
-    # Style the button to look like a card
     st.markdown("""
     <style>
     div[data-testid="stHorizontalBlock"] .stButton > button {
@@ -385,11 +356,8 @@ def render_accounts(df):
         col_idx = idx % 3
         with cols[col_idx]:
             logo_path = get_logo_path(row['username'])
-
-            # Build card label with username + stats
             label = f"@{row['username']}\n\n{row['posts']} posts  ·  {format_number(row['total_likes'])} likes"
 
-            # Two columns: button on left, logo on right
             btn_col, logo_col = st.columns([4, 1])
             with btn_col:
                 if st.button(label, key=f"btn_{row['username']}", use_container_width=True):
@@ -461,7 +429,6 @@ def render_analytics(df):
         st.warning("No data available for the selected date range.")
         return
 
-    # ── Top-level metrics ──────────────────────────────────────────────────
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Total Posts",    f"{len(df):,}")
     col2.metric("Accounts",       f"{df['username'].nunique()}")
@@ -470,17 +437,14 @@ def render_analytics(df):
 
     st.markdown("---")
 
-    # ── Per-account stats ──────────────────────────────────────────────────
-    # followers is constant per channel — take first value
     account_stats = df.groupby("username").agg(
-        posts        = ("post_id",   "count"),
-        total_likes  = ("likes",     "sum"),
-        avg_likes    = ("likes",     "mean"),
-        total_comments = ("comments","sum"),
-        followers    = ("followers", "first"),
+        posts          = ("post_id",   "count"),
+        total_likes    = ("likes",     "sum"),
+        avg_likes      = ("likes",     "mean"),
+        total_comments = ("comments",  "sum"),
+        followers      = ("followers", "first"),
     ).reset_index()
 
-    # Engagement Rate = (likes + 10×comments) / followers × 100
     account_stats["total_engagement"] = (
         account_stats["total_likes"] + 10 * account_stats["total_comments"]
     )
@@ -488,19 +452,18 @@ def render_analytics(df):
         account_stats["total_engagement"] / account_stats["followers"] * 100
     ).round(2)
 
-    # ── Performance table ──────────────────────────────────────────────────
     st.markdown("### Performance by Account")
     display_cols = ["username", "posts", "total_likes", "avg_likes",
                     "total_comments", "followers", "engagement_rate_%"]
     st.dataframe(
         account_stats[display_cols].sort_values("total_likes", ascending=False)
         .style.format({
-            "posts":            "{:,}",
-            "total_likes":      "{:,}",
-            "avg_likes":        "{:,.0f}",
-            "total_comments":   "{:,}",
-            "followers":        "{:,}",
-            "engagement_rate_%":"{:.2f}%",
+            "posts":             "{:,}",
+            "total_likes":       "{:,}",
+            "avg_likes":         "{:,.0f}",
+            "total_comments":    "{:,}",
+            "followers":         "{:,}",
+            "engagement_rate_%": "{:.2f}%",
         }),
         use_container_width=True,
         hide_index=True,
@@ -508,10 +471,8 @@ def render_analytics(df):
 
     st.markdown("---")
 
-    # ── Two charts side by side ────────────────────────────────────────────
     chart_left, chart_right = st.columns(2)
 
-    # 1) Likes Pie Chart
     with chart_left:
         st.markdown("### 🥧 Likes Share by Channel")
         pie = alt.Chart(account_stats).mark_arc(innerRadius=50).encode(
@@ -528,7 +489,6 @@ def render_analytics(df):
         ).properties(height=340)
         st.altair_chart(pie, use_container_width=True)
 
-    # 2) Engagement Rate Bar Chart
     with chart_right:
         st.markdown("### 📈 Engagement Rate by Channel")
         bar = alt.Chart(account_stats).mark_bar(cornerRadiusTopLeft=4, cornerRadiusTopRight=4).encode(
@@ -541,9 +501,9 @@ def render_analytics(df):
                 scale=alt.Scale(scheme="tableau10"),
             ),
             tooltip=[
-                alt.Tooltip("username:N",         title="Channel"),
-                alt.Tooltip("engagement_rate_%:Q",title="Engagement Rate (%)", format=".2f"),
-                alt.Tooltip("followers:Q",         title="Followers",          format=","),
+                alt.Tooltip("username:N",          title="Channel"),
+                alt.Tooltip("engagement_rate_%:Q", title="Engagement Rate (%)", format=".2f"),
+                alt.Tooltip("followers:Q",          title="Followers",           format=","),
             ],
         ).properties(height=340)
         st.altair_chart(bar, use_container_width=True)
@@ -579,48 +539,12 @@ def render_top_posts(df):
                 st.metric("💬", f"{row['comments']:,}")
         st.markdown("---")
 
-def render_categories(cat_df):
-    if cat_df is None or cat_df.empty:
-        st.warning("⚠️ No categorized data available")
-        return
-    
-    st.markdown('<div class="section-title">Categories</div>', unsafe_allow_html=True)
-    
-    categories = sorted(cat_df['category'].dropna().unique())
-    selected   = st.selectbox("Select category", categories, key="cat")
-    filtered   = cat_df[cat_df['category'] == selected].copy()
-    
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Posts",    f"{len(filtered):,}")
-    col2.metric("Avg Likes", format_number(int(filtered['likes'].mean())))
-    col3.metric("Accounts",  f"{filtered['username'].nunique()}")
-    
-    st.markdown(f"### Top Posts in {selected}")
-    
-    for _, row in filtered.nlargest(15, 'likes').iterrows():
-        with st.container():
-            col1, col2, col3 = st.columns([1, 4, 2])
-            with col1:
-                if pd.notna(row.get('media_url')):
-                    st.image(row['media_url'], use_container_width=True)
-            with col2:
-                st.markdown(f"**@{row['username']}**")
-                caption = str(row.get('caption', ''))[:200]
-                st.markdown(f"{caption}..." if len(str(row.get('caption', ''))) > 200 else caption)
-                if pd.notna(row.get('post_link')) and str(row.get('post_link', '')).startswith('http'):
-                    st.markdown(f"[🔗 View Original Post]({row['post_link']})")
-            with col3:
-                st.metric("❤️", f"{row['likes']:,}")
-                st.metric("💬", f"{row['comments']:,}")
-        st.markdown("---")
-
 # -----------------------
 # Auth
 # -----------------------
-APP_PASSWORD = "TOI@1234"   # ← change this to whatever you want
+APP_PASSWORD = "TOI@1234"
 
 def check_auth():
-    """Show password gate. Returns True if authenticated."""
     if st.session_state.get('authenticated'):
         return True
 
@@ -645,11 +569,6 @@ def check_auth():
         color: #6b7280;
         font-size: 14px;
         margin-bottom: 28px;
-    }
-    .login-err {
-        color: #f87171;
-        font-size: 13px;
-        margin-top: 10px;
     }
     </style>
     """, unsafe_allow_html=True)
@@ -678,44 +597,33 @@ def main():
     if not check_auth():
         st.stop()
 
-    # Change 1: Default opening page → Top Posts
     if 'page' not in st.session_state:
         st.session_state['page'] = 'top_posts'
     if 'selected_account' not in st.session_state:
         st.session_state['selected_account'] = None
-    
+
     with st.spinner("Loading..."):
-        df = load_data(CSV_FILE)
+        df = load_data("supabase")
         df = preprocess(df)
-        
-        try:
-            cat_df = load_data(CATEGORY_CSV)
-            cat_df = preprocess(cat_df)
-        except:
-            cat_df = None
-    
+
     with st.sidebar:
         st.markdown(f'<div style="color:#5b7bfc;font-size:20px;font-weight:700;margin-bottom:2px;">{APP_TITLE}</div>', unsafe_allow_html=True)
         st.markdown(f'<div style="color:#6b7280;font-size:12px;margin-bottom:20px;">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
-        
+
         pages = {
             'Top Posts': ('🏆', 'top_posts'),
             'Accounts':  ('🏠', 'accounts'),
             'Analytics': ('📊', 'analytics'),
         }
-        
-        if cat_df is not None:
-            pages['Categories'] = ('📂', 'categories')
-        
+
         for label, (icon, page_id) in pages.items():
             if st.button(f"{icon}  {label}", key=f"nav_{page_id}", use_container_width=True):
                 st.session_state['page'] = page_id
                 st.rerun()
-        
-        # Date Range
-        st.markdown('<div class="date-range-section">',               unsafe_allow_html=True)
+
+        st.markdown('<div class="date-range-section">', unsafe_allow_html=True)
         st.markdown('<div class="date-range-title">Date Range</div>', unsafe_allow_html=True)
-        
+
         min_date     = df["post_date"].min()
         max_date     = df["post_date"].max()
         today        = date.today()
@@ -731,7 +639,6 @@ def main():
 
         st.markdown('</div>', unsafe_allow_html=True)
 
-        # Channel filter with Select All / Clear All
         st.markdown("---")
         st.markdown('<div class="date-range-title">Filter Channels</div>', unsafe_allow_html=True)
         all_channels = sorted(df["username"].unique().tolist())
@@ -739,7 +646,6 @@ def main():
         if 'channel_filter' not in st.session_state:
             st.session_state['channel_filter'] = all_channels
 
-        # Subtle small toggle buttons
         st.markdown("""
         <style>
         .ch-toggle button {
@@ -783,18 +689,11 @@ def main():
             label_visibility="collapsed",
         )
         if not selected_channels:
-            selected_channels = all_channels  # fallback — never empty
+            selected_channels = all_channels
 
-    # Apply date filter
-    filtered_df  = filter_by_date(df, start, end)
-    filtered_cat = filter_by_date(cat_df, start, end) if cat_df is not None else None
-
-    # Apply channel filter
+    filtered_df = filter_by_date(df, start, end)
     filtered_df = filtered_df[filtered_df["username"].isin(selected_channels)]
-    if filtered_cat is not None:
-        filtered_cat = filtered_cat[filtered_cat["username"].isin(selected_channels)]
 
-    # Page title — shown once only
     st.markdown(f'<div class="main-title">{APP_TITLE}</div>',       unsafe_allow_html=True)
     st.markdown(f'<div class="main-subtitle">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
 
@@ -806,8 +705,6 @@ def main():
         render_analytics(filtered_df)
     elif st.session_state['page'] == 'top_posts':
         render_top_posts(filtered_df)
-    elif st.session_state['page'] == 'categories':
-        render_categories(filtered_cat)
 
 if __name__ == "__main__":
     main()

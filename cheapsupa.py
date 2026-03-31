@@ -133,7 +133,7 @@ def push_to_supabase(posts):
     for i in range(0, len(posts), BATCH_SIZE):
         batch = posts[i:i + BATCH_SIZE]
         try:
-            supabase.table("posts").upsert(batch).execute()
+            supabase.table("posts").upsert(batch, on_conflict="post_link").execute()  # ✅ add this
             print(f"  Batch {i//BATCH_SIZE + 1} pushed ({len(batch)} rows)")
         except Exception as e:
             print(f"  Insert error: {e}")
