@@ -26,7 +26,7 @@ APP_SUBTITLE = "Channel Performance Dashboard"
 CSV_FILE = "/Users/shreshthsharma1006/Documents/instascraper/instascraper.csv"
 CATEGORY_CSV = "/Users/shreshthsharma1006/Documents/instascraper/instascraper_categorized.csv"
 
-LOGO_DIR = "/Users/shreshthsharma1006/Documents/instascraper/INST CHANNEL IMG"
+LOGO_DIR = "images"
 
 LOGO_MAP = {
     "ani_trending":   "ANI TRNDING.png",
