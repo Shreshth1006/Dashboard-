@@ -1,45 +1,29 @@
-# trigger
 name: Instagram Scraper
 
 on:
   schedule:
-    # ✅ EASY SCHEDULE — all times are UTC (IST = UTC + 5:30)
-    # 9:00 AM IST  = 3:30 AM UTC
-    # 11:00 AM IST = 5:30 AM UTC
-    # 1:00 PM IST  = 7:30 AM UTC
-    # 3:00 PM IST  = 9:30 AM UTC
-    # 6:00 PM IST  = 12:30 PM UTC
     - cron: '30 3 * * *'   # 9:00 AM IST
     - cron: '30 5 * * *'   # 11:00 AM IST
     - cron: '30 7 * * *'   # 1:00 PM IST
     - cron: '30 9 * * *'   # 3:00 PM IST
     - cron: '30 12 * * *'  # 6:00 PM IST
-
-  # ✅ Lets you trigger it manually from GitHub too
   workflow_dispatch:
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v3
+      - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
+      - uses: actions/setup-python@v4
         with:
           python-version: '3.11'
-          
+
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          python -m pip install scrapfly-sdk supabase python-dotenv pandas
-          
-      - name: Debug imports
-        run: |
-          pip show scrapfly
-          python -c "from scrapfly import ScrapflyClient, ScrapeConfig; print('OK')"
+        run: pip install scrapfly-sdk supabase python-dotenv pandas
+
+      - name: Verify install
+        run: python -c "from scrapfly import ScrapflyClient, ScrapeConfig; print('scrapfly OK')"
 
       - name: Run scraper
         env:
