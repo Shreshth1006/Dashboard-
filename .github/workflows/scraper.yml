@@ -36,6 +36,11 @@ jobs:
           pip install --upgrade pip
           pip install scrapfly supabase python-dotenv pandas
 
+      - name: Debug imports
+        run: |
+          pip show scrapfly
+          python -c "from scrapfly import ScrapflyClient, ScrapeConfig; print('OK')"
+
       - name: Run scraper
         env:
           SCRAPFLY_KEY: ${{ secrets.SCRAPFLY_KEY }}
