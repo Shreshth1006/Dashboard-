@@ -1,30 +1,22 @@
 name: Instagram Scraper
-
 on:
   schedule:
-    - cron: '30 3 * * *'   # 9:00 AM IST
-    - cron: '30 5 * * *'   # 11:00 AM IST
-    - cron: '30 7 * * *'   # 1:00 PM IST
-    - cron: '30 9 * * *'   # 3:00 PM IST
-    - cron: '30 12 * * *'  # 6:00 PM IST
+    - cron: '30 3 * * *'
+    - cron: '30 5 * * *'
+    - cron: '30 7 * * *'
+    - cron: '30 9 * * *'
+    - cron: '30 12 * * *'
   workflow_dispatch:
-
 jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4        # updated from v3
-
-      - uses: actions/setup-python@v5    # updated from v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
       - name: Install dependencies
         run: pip install scrapfly-sdk supabase python-dotenv pandas
-
-      - name: Verify install
-        run: python -c "from scrapfly import ScrapflyClient, ScrapeConfig; print('scrapfly OK')"
-
       - name: Run scraper
         env:
           SCRAPFLY_KEY: ${{ secrets.SCRAPFLY_KEY }}
