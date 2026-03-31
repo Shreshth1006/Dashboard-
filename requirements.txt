@@ -1,8 +1,9 @@
+scrapfly-sdk
 streamlit
 pandas
 altair
 supabase
 python-dotenv
 requests
-scrapfly-sdk
+
 
