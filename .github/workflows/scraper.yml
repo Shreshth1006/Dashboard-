@@ -13,9 +13,9 @@ jobs:
   scrape:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4        # updated from v3
 
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5    # updated from v4
         with:
           python-version: '3.11'
 
