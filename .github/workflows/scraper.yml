@@ -38,4 +38,4 @@ jobs:
           SCRAPFLY_KEY: ${{ secrets.SCRAPFLY_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: python scraper.py
+        run: python cheapsupa.py
