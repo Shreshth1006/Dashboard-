@@ -109,11 +109,11 @@ def trigger_scraper():
         return False, f"❌ Error: {e}"
 
 def get_last_scrape_time():
-    """Get the most recently scraped post time from Supabase as a proxy for last run."""
+    """Get the most recent scraped_time from Supabase."""
     try:
-        resp = supabase.table("posts").select("post_time").order("post_time", desc=True).limit(1).execute()
-        if resp.data:
-            dt = datetime.fromisoformat(resp.data[0]["post_time"])
+        resp = supabase.table("posts").select("scraped_time").order("scraped_time", desc=True).limit(1).execute()
+        if resp.data and resp.data[0].get("scraped_time"):
+            dt = datetime.fromisoformat(resp.data[0]["scraped_time"])
             return dt.strftime("%-I:%M %p, %d %b %Y")
     except:
         pass

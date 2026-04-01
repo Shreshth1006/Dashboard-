@@ -24,8 +24,6 @@ TARGET_ACCOUNTS = [
     "timesofindia", "ani_trending"
 ]
 
-# How far back to look for posts (set this to gap between your runs)
-# e.g. runs at 9am, 11am → gap is 2 hours → set 3 to be safe
 SCRAPE_SINCE_HOURS = 3
 
 ACCOUNT_DELAY_MIN = 4
@@ -55,7 +53,7 @@ def get_caption(node):
     except (KeyError, IndexError):
         return ""
 
-def get_posts_for_account(username, cutoff):
+def get_posts_for_account(username, cutoff, scraped_time):
     url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={username}"
 
     try:
@@ -102,6 +100,7 @@ def get_posts_for_account(username, cutoff):
             "hashtags": extract_hashtags(caption),
             "likes": node.get('edge_liked_by', {}).get('count', 0),
             "comments": node.get('edge_media_to_comment', {}).get('count', 0),
+            "scraped_time": scraped_time,   # ✅ when this scrape run happened
         })
 
     print(f"  {len(collected)} new | {skipped_old} skipped (old)")
@@ -109,12 +108,17 @@ def get_posts_for_account(username, cutoff):
 
 def get_all_posts():
     cutoff = datetime.now() - timedelta(hours=SCRAPE_SINCE_HOURS)
-    print(f"Cutoff: {cutoff.strftime('%Y-%m-%d %H:%M:%S')} (last {SCRAPE_SINCE_HOURS}h)\n")
+
+    # ✅ One single timestamp for the entire run
+    scraped_time = datetime.now().isoformat()
+
+    print(f"Cutoff: {cutoff.strftime('%Y-%m-%d %H:%M:%S')} (last {SCRAPE_SINCE_HOURS}h)")
+    print(f"Scraped time: {scraped_time}\n")
 
     all_data = []
     for i, username in enumerate(TARGET_ACCOUNTS):
         print(f"[{i+1}/{len(TARGET_ACCOUNTS)}] @{username}")
-        posts = get_posts_for_account(username, cutoff)
+        posts = get_posts_for_account(username, cutoff, scraped_time)
         all_data.extend(posts)
 
         if i < len(TARGET_ACCOUNTS) - 1:
@@ -133,7 +137,7 @@ def push_to_supabase(posts):
     for i in range(0, len(posts), BATCH_SIZE):
         batch = posts[i:i + BATCH_SIZE]
         try:
-            supabase.table("posts").upsert(batch, on_conflict="post_link").execute()  # ✅ add this
+            supabase.table("posts").upsert(batch, on_conflict="post_link").execute()
             print(f"  Batch {i//BATCH_SIZE + 1} pushed ({len(batch)} rows)")
         except Exception as e:
             print(f"  Insert error: {e}")

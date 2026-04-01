@@ -8,6 +8,7 @@ from scrapfly import ScrapflyClient, ScrapeConfig
 from supabase import create_client
 from dotenv import load_dotenv
 load_dotenv()
+
 # =============================
 # CONFIGURATION
 # =============================
@@ -28,15 +29,14 @@ TARGET_ACCOUNTS = [
 # =============================
 # SCRAPING CONTROLS
 # =============================
-SCRAPE_SINCE_HOURS = 24
+SCRAPE_SINCE_HOURS    = 24
 MAX_PAGES_PER_ACCOUNT = 1
-
-MIN_DELAY = 3.0
-MAX_DELAY = 6.0
-ACCOUNT_DELAY_MIN = 6
-ACCOUNT_DELAY_MAX = 12
-MAX_RETRIES = 3
-RETRY_DELAY = 10
+MIN_DELAY             = 3.0
+MAX_DELAY             = 6.0
+ACCOUNT_DELAY_MIN     = 6
+ACCOUNT_DELAY_MAX     = 12
+MAX_RETRIES           = 3
+RETRY_DELAY           = 10
 
 BASE_HEADERS = {
     "x-ig-app-id": "936619743392459",
@@ -88,10 +88,8 @@ def scrape_url(url):
 def get_user_id(username):
     url = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={username}"
     data = scrape_url(url)
-
     if not data:
         raise Exception("Failed to fetch user")
-
     user = data['data']['user']
     return user['id'], user['edge_followed_by']['count']
 
@@ -99,7 +97,7 @@ def get_user_id(username):
 # STEP 2 - Paginate feed
 # =============================
 
-def get_posts_for_account(username):
+def get_posts_for_account(username, scraped_time):
     cutoff = (
         datetime.now() - timedelta(hours=SCRAPE_SINCE_HOURS)
         if SCRAPE_SINCE_HOURS else None
@@ -152,17 +150,17 @@ def get_posts_for_account(username):
                 continue
 
             caption = get_caption(item)
-
             posts_collected.append({
-                "username": username,
-                "followers": followers,
-                "post_link": f"https://www.instagram.com/p/{item['code']}/",
-                "media_url": get_media_url(item),
-                "post_time": post_time.isoformat(),  # ✅ FIXED
-                "caption": caption,
-                "hashtags": extract_hashtags(caption),
-                "likes": item.get('like_count', 0),
-                "comments": item.get('comment_count', 0),
+                "username":     username,
+                "followers":    followers,
+                "post_link":    f"https://www.instagram.com/p/{item['code']}/",
+                "media_url":    get_media_url(item),
+                "post_time":    post_time.isoformat(),
+                "caption":      caption,
+                "hashtags":     extract_hashtags(caption),
+                "likes":        item.get('like_count', 0),
+                "comments":     item.get('comment_count', 0),
+                "scraped_time": scraped_time,  # ✅ when this scrape run happened
             })
 
         past_cutoff = bool(cutoff and oldest_on_page and oldest_on_page < cutoff)
@@ -187,13 +185,17 @@ def get_posts_for_account(username):
 # =============================
 
 def get_all_posts():
+    # ✅ One single timestamp for the entire run
+    scraped_time = datetime.now().isoformat()
+    print(f"Scraped time: {scraped_time}\n")
+
     all_data = []
 
     for i, username in enumerate(TARGET_ACCOUNTS):
         print(f"\n[{i+1}/{len(TARGET_ACCOUNTS)}] @{username}")
 
         try:
-            posts = get_posts_for_account(username)
+            posts = get_posts_for_account(username, scraped_time)
             all_data.extend(posts)
             print(f"Collected {len(posts)} posts")
         except Exception as e:
@@ -209,6 +211,7 @@ def get_all_posts():
 # =============================
 # SUPABASE PUSH
 # =============================
+
 def push_to_supabase(posts):
     if not posts:
         print("No new posts to push.")
@@ -218,7 +221,7 @@ def push_to_supabase(posts):
     for i in range(0, len(posts), BATCH_SIZE):
         batch = posts[i:i + BATCH_SIZE]
         try:
-            supabase.table("posts").upsert(batch, on_conflict="post_link").execute()  # ✅ add this
+            supabase.table("posts").upsert(batch, on_conflict="post_link").execute()
             print(f"  Batch {i//BATCH_SIZE + 1} pushed ({len(batch)} rows)")
         except Exception as e:
             print(f"  Insert error: {e}")
@@ -229,11 +232,10 @@ def push_to_supabase(posts):
 
 def main():
     print("Starting scrape...\n")
-
     posts = get_all_posts()
     print(f"\nTotal posts: {len(posts)}")
-
     push_to_supabase(posts)
+    print("Done.")
 
 if __name__ == "__main__":
     main()
