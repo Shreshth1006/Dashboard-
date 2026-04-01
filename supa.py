@@ -3,7 +3,7 @@ import re
 import json
 import time
 import random
-from datetime import datetime, timedelta
+from datetime import datetime
 from scrapfly import ScrapflyClient, ScrapeConfig
 from supabase import create_client
 from dotenv import load_dotenv
@@ -29,8 +29,7 @@ TARGET_ACCOUNTS = [
 # =============================
 # SCRAPING CONTROLS
 # =============================
-SCRAPE_SINCE_HOURS    = 24
-MAX_PAGES_PER_ACCOUNT = 1
+MAX_PAGES_PER_ACCOUNT = 3
 MIN_DELAY             = 3.0
 MAX_DELAY             = 6.0
 ACCOUNT_DELAY_MIN     = 6
@@ -98,11 +97,6 @@ def get_user_id(username):
 # =============================
 
 def get_posts_for_account(username, scraped_time):
-    cutoff = (
-        datetime.now() - timedelta(hours=SCRAPE_SINCE_HOURS)
-        if SCRAPE_SINCE_HOURS else None
-    )
-
     print(f"Resolving @{username}...", end=" ", flush=True)
 
     try:
@@ -128,7 +122,7 @@ def get_posts_for_account(username, scraped_time):
             break
 
         items = data.get('items', [])
-        more = data.get('more_available', False)
+        more  = data.get('more_available', False)
         max_id = data.get('next_max_id')
 
         print(f"{len(items)} posts", end="")
@@ -137,19 +131,12 @@ def get_posts_for_account(username, scraped_time):
             print(" | empty, stopping.")
             break
 
-        oldest_on_page = None
-
+        # ✅ No date filter — collect ALL posts on the page
         for item in items:
             ts = item.get('taken_at', 0)
             post_time = datetime.fromtimestamp(ts)
-
-            if oldest_on_page is None or post_time < oldest_on_page:
-                oldest_on_page = post_time
-
-            if cutoff and post_time < cutoff:
-                continue
-
             caption = get_caption(item)
+
             posts_collected.append({
                 "username":     username,
                 "followers":    followers,
@@ -160,14 +147,8 @@ def get_posts_for_account(username, scraped_time):
                 "hashtags":     extract_hashtags(caption),
                 "likes":        item.get('like_count', 0),
                 "comments":     item.get('comment_count', 0),
-                "scraped_time": scraped_time,  # ✅ when this scrape run happened
+                "scraped_time": scraped_time,
             })
-
-        past_cutoff = bool(cutoff and oldest_on_page and oldest_on_page < cutoff)
-
-        if past_cutoff:
-            print(" | reached cutoff")
-            break
 
         if not more or not max_id:
             print(" | no more pages")
@@ -185,7 +166,6 @@ def get_posts_for_account(username, scraped_time):
 # =============================
 
 def get_all_posts():
-    # ✅ One single timestamp for the entire run
     scraped_time = datetime.now().isoformat()
     print(f"Scraped time: {scraped_time}\n")
 
@@ -214,13 +194,14 @@ def get_all_posts():
 
 def push_to_supabase(posts):
     if not posts:
-        print("No new posts to push.")
+        print("No posts to push.")
         return
 
     BATCH_SIZE = 50
     for i in range(0, len(posts), BATCH_SIZE):
         batch = posts[i:i + BATCH_SIZE]
         try:
+            # ✅ New posts inserted, existing posts likes/comments updated
             supabase.table("posts").upsert(batch, on_conflict="post_link").execute()
             print(f"  Batch {i//BATCH_SIZE + 1} pushed ({len(batch)} rows)")
         except Exception as e:

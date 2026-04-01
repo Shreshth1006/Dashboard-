@@ -323,7 +323,10 @@ def render_top_posts(df):
     st.markdown('<div class="section-title">Top Posts</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1: n = st.selectbox("Show top", [10, 20, 30, 50], key="top_n")
-    with col2: metric = st.selectbox("Ranked by", ["Likes", "Comments"], key="metric")
+    with col2: metric = st.selectbox("Ranked by", ["Likes", "Comments", "Latest"], key="metric")
+    metric_col = "likes" if metric == "Likes" else "comments" if metric == "Comments" else "posted_at_dt"
+    top = df.nlargest(n, metric_col) if metric != "Latest" else df.sort_values('posted_at_dt', ascending=False).head(n)
+    st.markdown(f"### Top {n} by {metric}")
 
     metric_col = "likes" if metric == "Likes" else "comments"
     top = df.nlargest(n, metric_col)
