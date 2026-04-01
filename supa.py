@@ -22,8 +22,7 @@ supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 TARGET_ACCOUNTS = [
     "indiatoday", "hindustantimes", "ndtv", "ndtvindia", "news24official",
-    "timesnow", "abpnewstv", "news9live", "the_hindu", "brut.india",
-    "timesofindia", "ani_trending"
+   
 ]
 
 # =============================
@@ -202,7 +201,7 @@ def push_to_supabase(posts):
         batch = posts[i:i + BATCH_SIZE]
         try:
             # ✅ New posts inserted, existing posts likes/comments updated
-            supabase.table("posts").upsert(batch, on_conflict="post_link").execute()
+            supabase.table("posts").upsert(batch, on_conflict="post_link", ignore_duplicates=False).execute()
             print(f"  Batch {i//BATCH_SIZE + 1} pushed ({len(batch)} rows)")
         except Exception as e:
             print(f"  Insert error: {e}")
