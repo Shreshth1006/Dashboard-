@@ -125,14 +125,22 @@ def get_last_scrape_time():
 @st.cache_data(ttl=300)
 def load_data(cache_key):
     try:
-        response = supabase.table("posts").select("*").execute()
+        response = supabase.table("posts") \
+            .select("*") \
+            .order("post_time", desc=True) \
+            .limit(1000) \
+            .execute()
+
         data = response.data
+
         if not data:
             st.warning("⚠️ No data found in database")
             return pd.DataFrame()
+
         df = pd.DataFrame(data)
         logger.info(f"Loaded {len(df)} rows from Supabase")
         return df
+
     except Exception as e:
         st.error(f"❌ Supabase error: {e}")
         st.stop()
@@ -325,7 +333,7 @@ def render_top_posts(df):
     with col1: n = st.selectbox("Show top", [10, 20, 30, 50], key="top_n")
     with col2: metric = st.selectbox("Ranked by", ["Likes", "Comments", "Latest"], key="metric")
     metric_col = "likes" if metric == "Likes" else "comments" if metric == "Comments" else "posted_at_dt"
-    top = df.nlargest(n, metric_col) if metric != "Latest" else df.sort_values('posted_at_dt', ascending=False).head(n)
+    top = df.nlargest(n, metric_col) if metric != "Latest" else df.sort_values('posted_at_dt', ascending=True).head(n)
     st.markdown(f"### Top {n} by {metric}")
 
     metric_col = "likes" if metric == "Likes" else "comments"
@@ -500,3 +508,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#git add . && git commit -m "update" && git pull origin main --rebase && git push origin main
