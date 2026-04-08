@@ -4,7 +4,7 @@ import json
 import time
 import random
 import httpx
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from scrapfly import ScrapflyClient, ScrapeConfig
 from supabase import create_client
 from dotenv import load_dotenv
@@ -18,13 +18,27 @@ SCRAPFLY_KEY = os.getenv("SCRAPFLY_KEY")
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-client  = ScrapflyClient(key=SCRAPFLY_KEY)
+client   = ScrapflyClient(key=SCRAPFLY_KEY)
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+IST = timezone(timedelta(hours=5, minutes=30))
+
+# Hardcoded user_ids — no scrape credit wasted resolving these
 TARGET_ACCOUNTS = [
-    "indiatoday", "hindustantimes", "ndtv", "ndtvindia", "news24official",
-    "timesnow", "abpnewstv", "news9live", "the_hindu", "brut.india",
-    "timesofindia", "ani_trending"
+    {"username": "indiatoday",       "user_id": "1542430186",  "followers": 6800000},
+    {"username": "hindustantimes",   "user_id": "1072450671",  "followers": 5200000},
+    {"username": "ndtv",             "user_id": "176062718",   "followers": 7100000},
+    {"username": "ndtvindia",        "user_id": "31254711281", "followers": 4500000},
+    {"username": "news24official",   "user_id": "5433640349",  "followers": 1200000},
+    {"username": "timesnow",         "user_id": "573878215",   "followers": 3800000},
+    {"username": "abpnewstv",        "user_id": "1412650800",  "followers": 2900000},
+    {"username": "news9live",        "user_id": "7359015919",  "followers": 800000},
+    {"username": "the_hindu",        "user_id": "1326018790",  "followers": 3100000},
+    {"username": "brut.india",       "user_id": "8012421289",  "followers": 9200000},
+    {"username": "timesofindia",     "user_id": "1691326988",  "followers": 8400000},
+    {"username": "ani_trending",     "user_id": "8712374554",  "followers": 1500000},
+    {"username": "abcnews",          "user_id": "327693598",   "followers": 3200000},
+    {"username": "bbcnews",          "user_id": "16278726",    "followers": 11000000},
 ]
 
 # =============================
@@ -50,35 +64,27 @@ BASE_HEADERS = {
 # =============================
 
 def upload_image(image_url, post_code):
-    """
-    Download image from Instagram CDN and upload to Supabase Storage.
-    Returns permanent public URL, or original CDN URL as fallback.
-    """
     if not image_url or not post_code:
         return image_url
 
     filename = f"{post_code}.jpg"
 
     try:
-        # Download image directly from CDN (no Scrapfly needed)
         resp = httpx.get(image_url, timeout=10, follow_redirects=True)
         if resp.status_code != 200:
             return image_url
 
-        # Upload to Supabase Storage bucket "post-images"
         supabase.storage.from_("post-images").upload(
             path=filename,
             file=resp.content,
             file_options={"content-type": "image/jpeg", "upsert": "true"}
         )
 
-        # Return permanent public URL
-        public_url = supabase.storage.from_("post-images").get_public_url(filename)
-        return public_url
+        return supabase.storage.from_("post-images").get_public_url(filename)
 
     except Exception as e:
         print(f"  Image upload failed for {post_code}: {e}")
-        return image_url  # fallback to original CDN url
+        return image_url
 
 # =============================
 # HELPERS
@@ -100,7 +106,7 @@ def scrape_url(url):
         try:
             result = client.scrape(ScrapeConfig(
                 url=url,
-                asp=True,
+                asp=False,
                 headers=BASE_HEADERS,
             ))
             return json.loads(result.content)
@@ -114,40 +120,25 @@ def scrape_url(url):
                 return None
 
 # =============================
-# STEP 1 - Resolve user_id
+# SCRAPE FEED (no user_id lookup needed)
 # =============================
 
-def get_user_id(username):
-    url  = f"https://www.instagram.com/api/v1/users/web_profile_info/?username={username}"
-    data = scrape_url(url)
-    if not data:
-        raise Exception("Failed to fetch user")
-    user = data['data']['user']
-    return user['id'], user['edge_followed_by']['count']
+def get_posts_for_account(account, scraped_time):
+    username  = account["username"]
+    user_id   = account["user_id"]
+    followers = account["followers"]
 
-# =============================
-# STEP 2 - Paginate feed
-# =============================
-
-def get_posts_for_account(username, scraped_time):
-    print(f"Resolving @{username}...", end=" ", flush=True)
-
-    try:
-        user_id, followers = get_user_id(username)
-        print(f"ID={user_id} Followers={followers:,}")
-    except Exception as e:
-        print(f"FAILED: {e}")
-        return []
+    print(f"@{username} (ID={user_id})")
 
     posts_collected = []
     max_id = None
     page   = 1
 
-    # Cutoff: only posts from last 24 hours
-    cutoff = datetime.now().timestamp() - (24 * 60 * 60)
+    cutoff = datetime.now(IST).timestamp() - (24 * 60 * 60)
 
     while page <= MAX_PAGES_PER_ACCOUNT:
-        base = f"https://www.instagram.com/api/v1/feed/user/{user_id}/?count=12"
+        # count=50 reduces pages needed vs old count=12
+        base = f"https://www.instagram.com/api/v1/feed/user/{user_id}/?count=50"
         url  = f"{base}&max_id={max_id}" if max_id else base
 
         print(f"  Page {page}...", end=" ", flush=True)
@@ -171,19 +162,16 @@ def get_posts_for_account(username, scraped_time):
 
         for item in items:
             ts        = item.get('taken_at', 0)
-            post_time = datetime.fromtimestamp(ts)
+            post_time = datetime.fromtimestamp(ts, tz=IST)
             post_code = item.get('code', '')
 
             if oldest_on_page is None or ts < oldest_on_page:
                 oldest_on_page = ts
 
-            # Skip posts older than 24h but finish the page
             if ts < cutoff:
                 continue
 
-            caption = get_caption(item)
-
-            # Get CDN url then upload to Supabase Storage for permanence
+            caption    = get_caption(item)
             cdn_url    = item.get('image_versions2', {}).get('candidates', [{}])[0].get('url', '')
             stable_url = upload_image(cdn_url, post_code)
 
@@ -200,7 +188,6 @@ def get_posts_for_account(username, scraped_time):
                 "scraped_time": scraped_time,
             })
 
-        # Stop paginating if oldest post on this page is beyond 24h
         if oldest_on_page and oldest_on_page < cutoff:
             print(f" | oldest post beyond 24h, stopping.")
             break
@@ -221,16 +208,16 @@ def get_posts_for_account(username, scraped_time):
 # =============================
 
 def get_all_posts():
-    scraped_time = datetime.now().isoformat()
+    scraped_time = datetime.now(IST).isoformat()
     print(f"Scraped time: {scraped_time}\n")
 
     all_data = []
 
-    for i, username in enumerate(TARGET_ACCOUNTS):
-        print(f"\n[{i+1}/{len(TARGET_ACCOUNTS)}] @{username}")
+    for i, account in enumerate(TARGET_ACCOUNTS):
+        print(f"\n[{i+1}/{len(TARGET_ACCOUNTS)}] ", end="")
 
         try:
-            posts = get_posts_for_account(username, scraped_time)
+            posts = get_posts_for_account(account, scraped_time)
             all_data.extend(posts)
             print(f"  Collected {len(posts)} posts")
         except Exception as e:
