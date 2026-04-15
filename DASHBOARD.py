@@ -102,7 +102,7 @@ def trigger_scraper():
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=10)
         if resp.status_code == 204:
-            return True, "✅ Scraper triggered! Data will update in ~3-4 minutes."
+            return True, "✅ Scraper triggered! Data will update in ~10-15 minutes."
         else:
             return False, f"❌ Failed: {resp.status_code} — {resp.text}"
     except Exception as e:
