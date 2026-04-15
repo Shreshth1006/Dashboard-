@@ -331,13 +331,15 @@ def render_top_posts(df):
     st.markdown('<div class="section-title">Top Posts</div>', unsafe_allow_html=True)
     col1, col2 = st.columns(2)
     with col1: n = st.selectbox("Show top", [10, 20, 30, 50], key="top_n")
-    with col2: metric = st.selectbox("Ranked by", ["Likes", "Comments", "Latest"], key="metric")
-    metric_col = "likes" if metric == "Likes" else "comments" if metric == "Comments" else "posted_at_dt"
-    top = df.nlargest(n, metric_col) if metric != "Latest" else df.sort_values('posted_at_dt', ascending=True).head(n)
-    st.markdown(f"### Top {n} by {metric}")
+    with col2: metric = st.selectbox("Ranked by", ["Latest", "Likes", "Comments"], key="metric")
 
-    metric_col = "likes" if metric == "Likes" else "comments"
-    top = df.nlargest(n, metric_col)
+    if metric == "Latest":
+        top = df.sort_values('posted_at_dt', ascending=False).head(n)  # ✅ newest first
+    elif metric == "Likes":
+        top = df.nlargest(n, "likes")
+    else:
+        top = df.nlargest(n, "comments")
+
     st.markdown(f"### Top {n} by {metric}")
 
     for _, row in top.iterrows():
@@ -350,13 +352,14 @@ def render_top_posts(df):
                 st.markdown(f"**@{row['username']}**")
                 caption = str(row.get('caption', ''))[:200]
                 st.markdown(f"{caption}..." if len(str(row.get('caption', ''))) > 200 else caption)
+                if pd.notna(row.get('posted_at_dt')):
+                    st.caption(f"🕒 {row['posted_at_dt'].strftime('%d %b, %I:%M %p')} IST")
                 if pd.notna(row.get('post_link')) and str(row.get('post_link', '')).startswith('http'):
                     st.markdown(f"[🔗 View Original Post]({row['post_link']})")
             with col3:
                 st.metric("❤️", f"{row['likes']:,}")
                 st.metric("💬", f"{row['comments']:,}")
         st.markdown("---")
-
 # -----------------------
 # Auth
 # -----------------------
