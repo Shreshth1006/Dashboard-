@@ -15,14 +15,11 @@ load_dotenv()
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 GITHUB_TOKEN    = os.getenv("GITHUB_TOKEN")
-GITHUB_REPO     = os.getenv("GITHUB_REPO")       # e.g. "Shreshth1006/Dashboard-"
-GITHUB_WORKFLOW = os.getenv("GITHUB_WORKFLOW")   # e.g. "scraper.yml"
+GITHUB_REPO     = os.getenv("GITHUB_REPO")
+GITHUB_WORKFLOW = os.getenv("GITHUB_WORKFLOW")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# -----------------------
-# Configuration
-# -----------------------
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -44,20 +41,25 @@ LOGO_MAP = {
     "timesofindia":   "TOI.webp",
 }
 
-# -----------------------
-# Page Config
-# -----------------------
+SCHEDULER_TIMES = [
+    ("3:30 AM UTC", "9:00 AM IST"),
+    ("7:30 AM UTC", "1:00 PM IST"),
+    ("11:30 AM UTC", "5:00 PM IST"),
+    ("5:30 AM UTC", "11:00 AM IST"),
+    ("8:30 AM UTC", "2:00 PM IST"),
+]
+
 st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="expanded")
 
 # -----------------------
-# CSS
+# Theme Detection & CSS
 # -----------------------
 def apply_styles():
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
-    /* ─── CSS Variables: Light & Dark ─── */
+    /* ── Light theme (default) ── */
     :root {
         --bg-main:        #f5f6fa;
         --bg-card:        #ffffff;
@@ -67,13 +69,14 @@ def apply_styles():
         --text-primary:   #111827;
         --text-secondary: #6b7280;
         --accent:         #5b7bfc;
-        --shadow-hover:   rgba(91, 123, 252, 0.15);
+        --shadow-hover:   rgba(91,123,252,0.15);
         --btn-bg:         #ffffff;
-        --btn-hover:      #f0f1f6;
+        --btn-hover:      #eef0fb;
         --input-bg:       #ffffff;
-        --metric-bg:      #ffffff;
+        --logo-fallback:  #e8eaf6;
     }
 
+    /* ── Dark theme ── */
     @media (prefers-color-scheme: dark) {
         :root {
             --bg-main:        #000000;
@@ -84,81 +87,59 @@ def apply_styles():
             --text-primary:   #ffffff;
             --text-secondary: #6b7280;
             --accent:         #5b7bfc;
-            --shadow-hover:   rgba(91, 123, 252, 0.15);
+            --shadow-hover:   rgba(91,123,252,0.15);
             --btn-bg:         #0f0f0f;
             --btn-hover:      #1a1a1a;
             --input-bg:       #0f0f0f;
-            --metric-bg:      #0f0f0f;
+            --logo-fallback:  #1a1a2e;
         }
     }
 
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
 
-    /* ─── App Background ─── */
-    .stApp { background-color: var(--bg-main) !important; }
+    /* ── App & Sidebar ── */
+    .stApp                              { background-color: var(--bg-main) !important; }
+    [data-testid="stSidebar"]           { background-color: var(--bg-sidebar) !important; border-right: 1px solid var(--border) !important; }
+    [data-testid="stSidebar"] *        { color: var(--text-primary) !important; }
 
-    /* ─── Sidebar ─── */
-    [data-testid="stSidebar"] {
-        background-color: var(--bg-sidebar) !important;
-        border-right: 1px solid var(--border) !important;
-    }
-    [data-testid="stSidebar"] .stMarkdown { color: var(--text-primary) !important; }
-    [data-testid="stSidebar"] label       { color: var(--text-primary) !important; }
-
-    /* ─── Typography ─── */
+    /* ── Typography ── */
     footer { visibility: hidden; }
     .main-title    { color: var(--accent); font-size: 36px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
-    .main-subtitle { color: var(--text-secondary); font-size: 16px; font-weight: 400; margin-bottom: 40px; }
+    .main-subtitle { color: var(--text-secondary); font-size: 16px; margin-bottom: 40px; }
     .section-title { color: var(--text-primary); font-size: 24px; font-weight: 600; margin-bottom: 24px; margin-top: 40px; }
-    .last-updated  { color: var(--text-secondary); font-size: 12px; margin-top: 6px; margin-bottom: 16px; }
+    .last-updated  { color: var(--text-secondary); font-size: 12px; margin-top: 6px; margin-bottom: 8px; }
 
-    /* ─── General text ─── */
-    p, span, div, h1, h2, h3, h4, label, li {
-        color: var(--text-primary) !important;
-    }
-    .stMarkdown p, .stMarkdown span { color: var(--text-primary) !important; }
-
-    /* ─── Account / Date Cards ─── */
-    .account-card {
+    /* ── Scheduler info box ── */
+    .scheduler-info {
         background-color: var(--bg-card);
         border: 1px solid var(--border);
-        border-radius: 12px; padding: 28px 24px; margin-bottom: 20px;
-        transition: all 0.2s ease; cursor: pointer;
+        border-left: 3px solid var(--accent);
+        border-radius: 8px;
+        padding: 10px 12px;
+        margin-bottom: 12px;
+        font-size: 11px;
+        color: var(--text-secondary);
     }
-    .account-card:hover {
-        border-color: var(--border-hover);
-        background-color: var(--btn-hover);
-        transform: translateY(-2px);
-        box-shadow: 0 8px 16px var(--shadow-hover);
-    }
-    .date-range-section {
-        background-color: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 12px; padding: 20px 16px; margin-top: 24px;
-    }
-    .date-range-title { color: var(--text-primary) !important; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    .scheduler-info strong { color: var(--accent); display: block; margin-bottom: 4px; font-size: 11px; }
+    .scheduler-info span   { color: var(--text-primary); }
 
-    /* ─── Radio ─── */
-    .stRadio > label { display: none; }
-
-    /* ─── Metrics ─── */
+    /* ── Metrics ── */
     div[data-testid="metric-container"] {
-        background-color: var(--metric-bg);
-        border: 1px solid var(--border);
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
         border-radius: 12px; padding: 20px;
     }
-    div[data-testid="metric-container"] label { color: var(--text-secondary) !important; font-size: 14px; }
-    div[data-testid="metric-container"] [data-testid="stMetricValue"] {
-        color: var(--text-primary) !important; font-size: 28px; font-weight: 700;
-    }
+    div[data-testid="metric-container"] label                      { color: var(--text-secondary) !important; font-size: 14px; }
+    div[data-testid="metric-container"] [data-testid="stMetricValue"] { color: var(--text-primary) !important; font-size: 28px; font-weight: 700; }
 
-    /* ─── Buttons ─── */
+    /* ── All buttons ── */
     .stButton > button {
         background-color: var(--btn-bg) !important;
         border: 1px solid var(--border) !important;
         border-radius: 8px !important;
         color: var(--text-primary) !important;
-        padding: 10px 20px !important; font-weight: 500 !important;
+        padding: 10px 20px !important;
+        font-weight: 500 !important;
         transition: all 0.2s !important;
     }
     .stButton > button:hover {
@@ -166,15 +147,20 @@ def apply_styles():
         border-color: var(--border-hover) !important;
     }
 
-    /* ─── Account grid buttons ─── */
+    /* ── Account grid buttons (override the inline Streamlit block) ── */
     div[data-testid="stHorizontalBlock"] .stButton > button {
         background-color: var(--bg-card) !important;
         border: 1px solid var(--border) !important;
-        border-radius: 12px !important; padding: 20px !important;
-        text-align: left !important; height: auto !important;
-        min-height: 80px !important; white-space: normal !important;
-        line-height: 1.5 !important; color: var(--text-primary) !important;
-        font-size: 15px !important; font-weight: 500 !important;
+        border-radius: 12px !important;
+        padding: 20px !important;
+        text-align: left !important;
+        height: auto !important;
+        min-height: 80px !important;
+        white-space: normal !important;
+        line-height: 1.5 !important;
+        color: var(--text-primary) !important;
+        font-size: 15px !important;
+        font-weight: 500 !important;
         transition: all 0.2s ease !important;
     }
     div[data-testid="stHorizontalBlock"] .stButton > button:hover {
@@ -184,40 +170,45 @@ def apply_styles():
         box-shadow: 0 8px 16px var(--shadow-hover) !important;
     }
 
-    /* ─── Selectbox / Inputs ─── */
-    .stSelectbox > div > div {
+    /* ── Selectbox / Date / Multiselect ── */
+    .stSelectbox > div > div,
+    .stDateInput > div > div,
+    .stMultiSelect > div {
         background-color: var(--input-bg) !important;
         border: 1px solid var(--border) !important;
         border-radius: 8px !important;
         color: var(--text-primary) !important;
     }
-    .stSelectbox label { color: var(--text-primary) !important; font-weight: 500 !important; }
+    .stSelectbox label,
+    .stDateInput label,
+    .stMultiSelect label { color: var(--text-primary) !important; font-weight: 500 !important; }
+    .stDateInput input   { color: var(--text-primary) !important; }
+    .stMultiSelect span  { color: var(--text-primary) !important; }
 
-    /* ─── Date inputs ─── */
-    .stDateInput > div > div {
-        background-color: var(--input-bg) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 8px !important;
+    /* ── Dataframe ── */
+    .stDataFrame,
+    .stDataFrame thead th,
+    .stDataFrame tbody td {
+        background-color: var(--bg-card) !important;
+        color: var(--text-primary) !important;
     }
-    .stDateInput input { color: var(--text-primary) !important; }
 
-    /* ─── Multiselect ─── */
-    .stMultiSelect > div {
-        background-color: var(--input-bg) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 8px !important;
+    /* ── Date range card ── */
+    .date-range-section {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px; padding: 20px 16px; margin-top: 24px;
     }
-    .stMultiSelect span { color: var(--text-primary) !important; }
+    .date-range-title { color: var(--text-primary) !important; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
 
-    /* ─── Dataframe ─── */
-    .stDataFrame { background-color: var(--bg-card) !important; }
-    .stDataFrame thead th { background-color: var(--bg-card) !important; color: var(--text-primary) !important; }
-    .stDataFrame tbody td { color: var(--text-primary) !important; }
+    /* ── Misc ── */
+    .stRadio > label { display: none; }
+    hr               { border-color: var(--border) !important; }
+    .block-container { padding-top: 3rem; padding-bottom: 1rem; }
+    p, span, div, h1, h2, h3, h4, label, li { color: var(--text-primary); }
+    .stCaption, small { color: var(--text-secondary) !important; }
 
-    /* ─── Dividers ─── */
-    hr { border-color: var(--border) !important; }
-
-    /* ─── Channel toggle mini-buttons ─── */
+    /* ── Channel toggle mini-buttons ── */
     .ch-toggle button {
         font-size: 11px !important; padding: 3px 8px !important;
         min-height: 26px !important; height: 26px !important;
@@ -231,12 +222,6 @@ def apply_styles():
         color: var(--text-primary) !important;
         border-color: var(--border-hover) !important;
     }
-
-    /* ─── Block container ─── */
-    .block-container { padding-top: 3rem; padding-bottom: 1rem; }
-
-    /* ─── Caption text ─── */
-    .stCaption, small { color: var(--text-secondary) !important; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -244,29 +229,23 @@ def apply_styles():
 # GitHub Actions Trigger
 # -----------------------
 def trigger_scraper():
-    """Trigger the GitHub Actions scraper workflow via API."""
     if not GITHUB_TOKEN or not GITHUB_REPO or not GITHUB_WORKFLOW:
         return False, "GitHub secrets not configured."
-
     url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/{GITHUB_WORKFLOW}/dispatches"
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-    payload = {"ref": "main"}
-
     try:
-        resp = requests.post(url, headers=headers, json=payload, timeout=10)
+        resp = requests.post(url, headers=headers, json={"ref": "main"}, timeout=10)
         if resp.status_code == 204:
-            return True, "✅ Scraper triggered! Data will be updated in approximately 10–15 minutes. Please avoid clicking the button repeatedly and allow the scraping process to complete."
-        else:
-            return False, f"❌ Failed: {resp.status_code} — {resp.text}"
+            return True, "✅ Scraper triggered! Data will update in ~10–15 minutes."
+        return False, f"❌ Failed: {resp.status_code} — {resp.text}"
     except Exception as e:
         return False, f"❌ Error: {e}"
 
 def get_last_scrape_time():
-    """Get the most recent scraped_time from Supabase."""
     try:
         resp = supabase.table("posts").select("scraped_time").order("scraped_time", desc=True).limit(1).execute()
         if resp.data and resp.data[0].get("scraped_time"):
@@ -282,22 +261,12 @@ def get_last_scrape_time():
 @st.cache_data(ttl=300)
 def load_data(cache_key):
     try:
-        response = supabase.table("posts") \
-            .select("*") \
-            .order("post_time", desc=True) \
-            .limit(1000) \
-            .execute()
-
+        response = supabase.table("posts").select("*").order("post_time", desc=True).limit(1000).execute()
         data = response.data
-
         if not data:
             st.warning("⚠️ No data found in database")
             return pd.DataFrame()
-
-        df = pd.DataFrame(data)
-        logger.info(f"Loaded {len(df)} rows from Supabase")
-        return df
-
+        return pd.DataFrame(data)
     except Exception as e:
         st.error(f"❌ Supabase error: {e}")
         st.stop()
@@ -319,8 +288,7 @@ def preprocess(df):
         df["post_id"] = df["post_link"].apply(
             lambda x: x.split("/")[-2] if pd.notna(x) and "/" in str(x) else ""
         )
-    df = df.dropna(subset=["username"])
-    return df
+    return df.dropna(subset=["username"])
 
 # -----------------------
 # Utilities
@@ -349,21 +317,6 @@ def render_accounts(df):
     stats.columns = ['username', 'posts', 'total_likes']
     stats = stats.sort_values('total_likes', ascending=False).reset_index(drop=True)
 
-    st.markdown("""
-    <style>
-    div[data-testid="stHorizontalBlock"] .stButton > button {
-        background-color: #0f0f0f !important; border: 1px solid #1f1f1f !important;
-        border-radius: 12px !important; padding: 20px !important; text-align: left !important;
-        height: auto !important; min-height: 80px !important; white-space: normal !important;
-        line-height: 1.5 !important; color: #ffffff !important; font-size: 15px !important;
-        font-weight: 500 !important; transition: all 0.2s ease !important;
-    }
-    div[data-testid="stHorizontalBlock"] .stButton > button:hover {
-        border-color: #5b7bfc !important; background-color: #121212 !important;
-        transform: translateY(-2px) !important; box-shadow: 0 8px 16px rgba(91,123,252,0.15) !important;
-    }
-    </style>""", unsafe_allow_html=True)
-
     cols = st.columns(3)
     for idx, row in stats.iterrows():
         with cols[idx % 3]:
@@ -381,9 +334,11 @@ def render_accounts(df):
                     st.image(logo_path, width=56)
                 else:
                     st.markdown(f"""
-                        <div style="width:52px;height:52px;border-radius:8px;background:#1a1a2e;
+                        <div style="width:52px;height:52px;border-radius:8px;
+                            background:var(--logo-fallback);
                             display:flex;align-items:center;justify-content:center;
-                            border:1px solid #2a2a2a;color:#5b7bfc;font-size:22px;font-weight:700;">
+                            border:1px solid var(--border);color:var(--accent);
+                            font-size:22px;font-weight:700;">
                             {row['username'][0].upper()}
                         </div>""", unsafe_allow_html=True)
 
@@ -410,7 +365,6 @@ def render_account_detail(df, username):
     st.markdown("---")
     st.markdown("### Recent Posts")
 
-    # ✅ Show ALL posts, no .head(20) limit
     for _, row in account_df.sort_values('posted_at_dt', ascending=False).iterrows():
         with st.container():
             col1, col2, col3 = st.columns([1, 4, 2])
@@ -491,7 +445,7 @@ def render_top_posts(df):
     with col2: metric = st.selectbox("Ranked by", ["Latest", "Likes", "Comments"], key="metric")
 
     if metric == "Latest":
-        top = df.sort_values('posted_at_dt', ascending=False).head(n)  # ✅ newest first
+        top = df.sort_values('posted_at_dt', ascending=False).head(n)
     elif metric == "Likes":
         top = df.nlargest(n, "likes")
     else:
@@ -517,6 +471,7 @@ def render_top_posts(df):
                 st.metric("❤️", f"{row['likes']:,}")
                 st.metric("💬", f"{row['comments']:,}")
         st.markdown("---")
+
 # -----------------------
 # Auth
 # -----------------------
@@ -528,10 +483,13 @@ def check_auth():
 
     st.markdown("""
     <style>
-    .login-wrap { max-width:380px; margin:120px auto 0 auto; background:#0f0f0f;
-        border:1px solid #1f1f1f; border-radius:16px; padding:40px 36px; text-align:center; }
-    .login-title { color:#5b7bfc; font-size:26px; font-weight:700; margin-bottom:6px; }
-    .login-sub { color:#6b7280; font-size:14px; margin-bottom:28px; }
+    .login-wrap {
+        max-width:380px; margin:120px auto 0 auto;
+        background:var(--bg-card); border:1px solid var(--border);
+        border-radius:16px; padding:40px 36px; text-align:center;
+    }
+    .login-title { color:var(--accent); font-size:26px; font-weight:700; margin-bottom:6px; }
+    .login-sub   { color:var(--text-secondary); font-size:14px; margin-bottom:28px; }
     </style>""", unsafe_allow_html=True)
 
     st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
@@ -571,14 +529,20 @@ def main():
         df = preprocess(df)
 
     with st.sidebar:
-        st.markdown(f'<div style="color:#5b7bfc;font-size:20px;font-weight:700;margin-bottom:2px;">{APP_TITLE}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div style="color:#6b7280;font-size:12px;margin-bottom:16px;">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="color:var(--accent);font-size:20px;font-weight:700;margin-bottom:2px;">{APP_TITLE}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
 
-        # ✅ Last updated time
         last_updated = get_last_scrape_time()
         st.markdown(f'<div class="last-updated">🕒 Last scraped: {last_updated}</div>', unsafe_allow_html=True)
 
-        # ✅ Trigger scraper button
+        # ── Scheduler info ──
+        st.markdown("""
+        <div class="scheduler-info">
+            <strong>⏰ Auto-scrape schedule (IST)</strong>
+            <span>9:00 AM &nbsp;·&nbsp; 11:00 AM &nbsp;·&nbsp; 1:00 PM &nbsp;·&nbsp; 2:00 PM &nbsp;·&nbsp; 5:00 PM</span>
+        </div>
+        """, unsafe_allow_html=True)
+
         if st.button("🚀 Run Scraper Now", use_container_width=True):
             with st.spinner("Triggering scraper..."):
                 success, msg = trigger_scraper()
@@ -599,7 +563,6 @@ def main():
                 st.session_state['page'] = page_id
                 st.rerun()
 
-        # ✅ Manual cache refresh
         st.markdown("---")
         if st.button("🔄 Refresh Data", use_container_width=True):
             st.cache_data.clear()
@@ -668,5 +631,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-#git add . && git commit -m "update" && git pull origin main --rebase && git push origin main

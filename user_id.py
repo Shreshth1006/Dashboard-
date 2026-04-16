@@ -10,9 +10,6 @@ SCRAPFLY_KEY = os.getenv("SCRAPFLY_KEY")
 client = ScrapflyClient(key=SCRAPFLY_KEY)
 
 TARGET_ACCOUNTS = [
-    "abcnews",
-    "bbcnews",
-    "freepost",
     "freepressjournal"
 ]
 

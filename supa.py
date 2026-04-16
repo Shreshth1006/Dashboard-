@@ -32,13 +32,11 @@ TARGET_ACCOUNTS = [
     {"username": "news24official",   "user_id": "5433640349",  "followers": 1200000},
     {"username": "timesnow",         "user_id": "573878215",   "followers": 3800000},
     {"username": "abpnewstv",        "user_id": "1412650800",  "followers": 2900000},
-    {"username": "news9live",        "user_id": "7359015919",  "followers": 800000},
-    {"username": "the_hindu",        "user_id": "1326018790",  "followers": 3100000},
     {"username": "brut.india",       "user_id": "8012421289",  "followers": 9200000},
     {"username": "timesofindia",     "user_id": "1691326988",  "followers": 8400000},
     {"username": "ani_trending",     "user_id": "8712374554",  "followers": 1500000},
-    {"username": "abcnews",          "user_id": "327693598",   "followers": 3200000},
     {"username": "bbcnews",          "user_id": "16278726",    "followers": 11000000},
+    {"username": "freepressjournal", "user_id": "3179979830",    "followers": 180000},
 ]
 
 # =============================
