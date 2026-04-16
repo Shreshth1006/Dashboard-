@@ -538,8 +538,8 @@ def main():
         # ── Scheduler info ──
         st.markdown("""
         <div class="scheduler-info">
-            <strong>⏰ Auto-scrape schedule (IST)</strong>
-            <span>9:00 AM &nbsp;·&nbsp; 11:00 AM &nbsp;·&nbsp; 1:00 PM &nbsp;·&nbsp; 2:00 PM &nbsp;·&nbsp; 5:00 PM</span>
+            <strong> Auto-scrape schedule (IST)</strong>
+            <span>9:00 AM &nbsp;·&nbsp; 11:00 AM &nbsp;·&nbsp; 1:00 PM &nbsp;·&nbsp; 2:30 PM &nbsp;·&nbsp; 5:30 PM</span>
         </div>
         """, unsafe_allow_html=True)
 
