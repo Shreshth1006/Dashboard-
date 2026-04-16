@@ -56,30 +56,187 @@ def apply_styles():
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    /* ─── CSS Variables: Light & Dark ─── */
+    :root {
+        --bg-main:        #f5f6fa;
+        --bg-card:        #ffffff;
+        --bg-sidebar:     #f0f1f6;
+        --border:         #e2e4ed;
+        --border-hover:   #5b7bfc;
+        --text-primary:   #111827;
+        --text-secondary: #6b7280;
+        --accent:         #5b7bfc;
+        --shadow-hover:   rgba(91, 123, 252, 0.15);
+        --btn-bg:         #ffffff;
+        --btn-hover:      #f0f1f6;
+        --input-bg:       #ffffff;
+        --metric-bg:      #ffffff;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --bg-main:        #000000;
+            --bg-card:        #0f0f0f;
+            --bg-sidebar:     #0a0a0a;
+            --border:         #1f1f1f;
+            --border-hover:   #5b7bfc;
+            --text-primary:   #ffffff;
+            --text-secondary: #6b7280;
+            --accent:         #5b7bfc;
+            --shadow-hover:   rgba(91, 123, 252, 0.15);
+            --btn-bg:         #0f0f0f;
+            --btn-hover:      #1a1a1a;
+            --input-bg:       #0f0f0f;
+            --metric-bg:      #0f0f0f;
+        }
+    }
+
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-    .stApp { background-color: #000000; }
-    [data-testid="stSidebar"] { background-color: #0a0a0a; border-right: 1px solid #1a1a1a; }
-    [data-testid="stSidebar"] .stMarkdown { color: #ffffff; }
+
+    /* ─── App Background ─── */
+    .stApp { background-color: var(--bg-main) !important; }
+
+    /* ─── Sidebar ─── */
+    [data-testid="stSidebar"] {
+        background-color: var(--bg-sidebar) !important;
+        border-right: 1px solid var(--border) !important;
+    }
+    [data-testid="stSidebar"] .stMarkdown { color: var(--text-primary) !important; }
+    [data-testid="stSidebar"] label       { color: var(--text-primary) !important; }
+
+    /* ─── Typography ─── */
     footer { visibility: hidden; }
-    .main-title { color: #5b7bfc; font-size: 36px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
-    .main-subtitle { color: #6b7280; font-size: 16px; font-weight: 400; margin-bottom: 40px; }
-    .section-title { color: #ffffff; font-size: 24px; font-weight: 600; margin-bottom: 24px; margin-top: 40px; }
-    .last-updated { color: #6b7280; font-size: 12px; margin-top: 6px; margin-bottom: 16px; }
-    .account-card { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 12px; padding: 28px 24px; margin-bottom: 20px; transition: all 0.2s ease; cursor: pointer; }
-    .account-card:hover { border-color: #5b7bfc; background-color: #121212; transform: translateY(-2px); box-shadow: 0 8px 16px rgba(91, 123, 252, 0.15); }
-    .date-range-section { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 12px; padding: 20px 16px; margin-top: 24px; }
-    .date-range-title { color: #ffffff; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+    .main-title    { color: var(--accent); font-size: 36px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
+    .main-subtitle { color: var(--text-secondary); font-size: 16px; font-weight: 400; margin-bottom: 40px; }
+    .section-title { color: var(--text-primary); font-size: 24px; font-weight: 600; margin-bottom: 24px; margin-top: 40px; }
+    .last-updated  { color: var(--text-secondary); font-size: 12px; margin-top: 6px; margin-bottom: 16px; }
+
+    /* ─── General text ─── */
+    p, span, div, h1, h2, h3, h4, label, li {
+        color: var(--text-primary) !important;
+    }
+    .stMarkdown p, .stMarkdown span { color: var(--text-primary) !important; }
+
+    /* ─── Account / Date Cards ─── */
+    .account-card {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px; padding: 28px 24px; margin-bottom: 20px;
+        transition: all 0.2s ease; cursor: pointer;
+    }
+    .account-card:hover {
+        border-color: var(--border-hover);
+        background-color: var(--btn-hover);
+        transform: translateY(-2px);
+        box-shadow: 0 8px 16px var(--shadow-hover);
+    }
+    .date-range-section {
+        background-color: var(--bg-card);
+        border: 1px solid var(--border);
+        border-radius: 12px; padding: 20px 16px; margin-top: 24px;
+    }
+    .date-range-title { color: var(--text-primary) !important; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+
+    /* ─── Radio ─── */
     .stRadio > label { display: none; }
-    div[data-testid="metric-container"] { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 12px; padding: 20px; }
-    div[data-testid="metric-container"] label { color: #6b7280; font-size: 14px; }
-    div[data-testid="metric-container"] [data-testid="stMetricValue"] { color: #ffffff; font-size: 28px; font-weight: 700; }
-    .stButton > button { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 8px; color: #ffffff; padding: 10px 20px; font-weight: 500; transition: all 0.2s; }
-    .stButton > button:hover { background-color: #1a1a1a; border-color: #2a2a2a; }
-    .stSelectbox > div > div { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 8px; }
-    .stSelectbox label { color: #ffffff; font-weight: 500; }
+
+    /* ─── Metrics ─── */
+    div[data-testid="metric-container"] {
+        background-color: var(--metric-bg);
+        border: 1px solid var(--border);
+        border-radius: 12px; padding: 20px;
+    }
+    div[data-testid="metric-container"] label { color: var(--text-secondary) !important; font-size: 14px; }
+    div[data-testid="metric-container"] [data-testid="stMetricValue"] {
+        color: var(--text-primary) !important; font-size: 28px; font-weight: 700;
+    }
+
+    /* ─── Buttons ─── */
+    .stButton > button {
+        background-color: var(--btn-bg) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important;
+        color: var(--text-primary) !important;
+        padding: 10px 20px !important; font-weight: 500 !important;
+        transition: all 0.2s !important;
+    }
+    .stButton > button:hover {
+        background-color: var(--btn-hover) !important;
+        border-color: var(--border-hover) !important;
+    }
+
+    /* ─── Account grid buttons ─── */
+    div[data-testid="stHorizontalBlock"] .stButton > button {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px !important; padding: 20px !important;
+        text-align: left !important; height: auto !important;
+        min-height: 80px !important; white-space: normal !important;
+        line-height: 1.5 !important; color: var(--text-primary) !important;
+        font-size: 15px !important; font-weight: 500 !important;
+        transition: all 0.2s ease !important;
+    }
+    div[data-testid="stHorizontalBlock"] .stButton > button:hover {
+        border-color: var(--border-hover) !important;
+        background-color: var(--btn-hover) !important;
+        transform: translateY(-2px) !important;
+        box-shadow: 0 8px 16px var(--shadow-hover) !important;
+    }
+
+    /* ─── Selectbox / Inputs ─── */
+    .stSelectbox > div > div {
+        background-color: var(--input-bg) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important;
+        color: var(--text-primary) !important;
+    }
+    .stSelectbox label { color: var(--text-primary) !important; font-weight: 500 !important; }
+
+    /* ─── Date inputs ─── */
+    .stDateInput > div > div {
+        background-color: var(--input-bg) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important;
+    }
+    .stDateInput input { color: var(--text-primary) !important; }
+
+    /* ─── Multiselect ─── */
+    .stMultiSelect > div {
+        background-color: var(--input-bg) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important;
+    }
+    .stMultiSelect span { color: var(--text-primary) !important; }
+
+    /* ─── Dataframe ─── */
+    .stDataFrame { background-color: var(--bg-card) !important; }
+    .stDataFrame thead th { background-color: var(--bg-card) !important; color: var(--text-primary) !important; }
+    .stDataFrame tbody td { color: var(--text-primary) !important; }
+
+    /* ─── Dividers ─── */
+    hr { border-color: var(--border) !important; }
+
+    /* ─── Channel toggle mini-buttons ─── */
+    .ch-toggle button {
+        font-size: 11px !important; padding: 3px 8px !important;
+        min-height: 26px !important; height: 26px !important;
+        border-radius: 6px !important;
+        background-color: var(--btn-hover) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--text-secondary) !important; font-weight: 400 !important;
+    }
+    .ch-toggle button:hover {
+        background-color: var(--btn-bg) !important;
+        color: var(--text-primary) !important;
+        border-color: var(--border-hover) !important;
+    }
+
+    /* ─── Block container ─── */
     .block-container { padding-top: 3rem; padding-bottom: 1rem; }
-    .ch-toggle button { font-size: 11px !important; padding: 3px 8px !important; min-height: 26px !important; height: 26px !important; border-radius: 6px !important; background-color: #1a1a1a !important; border: 1px solid #2a2a2a !important; color: #9ca3af !important; font-weight: 400 !important; }
-    .ch-toggle button:hover { background-color: #2a2a2a !important; color: #ffffff !important; border-color: #3a3a3a !important; }
+
+    /* ─── Caption text ─── */
+    .stCaption, small { color: var(--text-secondary) !important; }
     </style>
     """, unsafe_allow_html=True)
 
