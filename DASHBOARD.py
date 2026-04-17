@@ -20,6 +20,9 @@ GITHUB_WORKFLOW = os.getenv("GITHUB_WORKFLOW")
 
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
+# -----------------------
+# Configuration
+# -----------------------
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -41,187 +44,44 @@ LOGO_MAP = {
     "timesofindia":   "TOI.webp",
 }
 
-SCHEDULER_TIMES = [
-    ("3:30 AM UTC", "9:00 AM IST"),
-    ("7:30 AM UTC", "1:00 PM IST"),
-    ("11:30 AM UTC", "5:00 PM IST"),
-    ("5:30 AM UTC", "11:00 AM IST"),
-    ("8:30 AM UTC", "2:00 PM IST"),
-]
-
+# -----------------------
+# Page Config
+# -----------------------
 st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="expanded")
 
 # -----------------------
-# Theme Detection & CSS
+# CSS
 # -----------------------
 def apply_styles():
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-
-    /* ── Light theme (default) ── */
-    :root {
-        --bg-main:        #f5f6fa;
-        --bg-card:        #ffffff;
-        --bg-sidebar:     #f0f1f6;
-        --border:         #e2e4ed;
-        --border-hover:   #5b7bfc;
-        --text-primary:   #111827;
-        --text-secondary: #6b7280;
-        --accent:         #5b7bfc;
-        --shadow-hover:   rgba(91,123,252,0.15);
-        --btn-bg:         #ffffff;
-        --btn-hover:      #eef0fb;
-        --input-bg:       #ffffff;
-        --logo-fallback:  #e8eaf6;
-    }
-
-    /* ── Dark theme ── */
-    @media (prefers-color-scheme: dark) {
-        :root {
-            --bg-main:        #000000;
-            --bg-card:        #0f0f0f;
-            --bg-sidebar:     #0a0a0a;
-            --border:         #1f1f1f;
-            --border-hover:   #5b7bfc;
-            --text-primary:   #ffffff;
-            --text-secondary: #6b7280;
-            --accent:         #5b7bfc;
-            --shadow-hover:   rgba(91,123,252,0.15);
-            --btn-bg:         #0f0f0f;
-            --btn-hover:      #1a1a1a;
-            --input-bg:       #0f0f0f;
-            --logo-fallback:  #1a1a2e;
-        }
-    }
-
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-
-    /* ── App & Sidebar ── */
-    .stApp                              { background-color: var(--bg-main) !important; }
-    [data-testid="stSidebar"]           { background-color: var(--bg-sidebar) !important; border-right: 1px solid var(--border) !important; }
-    [data-testid="stSidebar"] *        { color: var(--text-primary) !important; }
-
-    /* ── Typography ── */
+    .stApp { background-color: #000000; }
+    [data-testid="stSidebar"] { background-color: #0a0a0a; border-right: 1px solid #1a1a1a; }
+    [data-testid="stSidebar"] .stMarkdown { color: #ffffff; }
     footer { visibility: hidden; }
-    .main-title    { color: var(--accent); font-size: 36px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
-    .main-subtitle { color: var(--text-secondary); font-size: 16px; margin-bottom: 40px; }
-    .section-title { color: var(--text-primary); font-size: 24px; font-weight: 600; margin-bottom: 24px; margin-top: 40px; }
-    .last-updated  { color: var(--text-secondary); font-size: 12px; margin-top: 6px; margin-bottom: 8px; }
-
-    /* ── Scheduler info box ── */
-    .scheduler-info {
-        background-color: var(--bg-card);
-        border: 1px solid var(--border);
-        border-left: 3px solid var(--accent);
-        border-radius: 8px;
-        padding: 10px 12px;
-        margin-bottom: 12px;
-        font-size: 11px;
-        color: var(--text-secondary);
-    }
-    .scheduler-info strong { color: var(--accent); display: block; margin-bottom: 4px; font-size: 11px; }
-    .scheduler-info span   { color: var(--text-primary); }
-
-    /* ── Metrics ── */
-    div[data-testid="metric-container"] {
-        background-color: var(--bg-card) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 12px; padding: 20px;
-    }
-    div[data-testid="metric-container"] label                      { color: var(--text-secondary) !important; font-size: 14px; }
-    div[data-testid="metric-container"] [data-testid="stMetricValue"] { color: var(--text-primary) !important; font-size: 28px; font-weight: 700; }
-
-    /* ── All buttons ── */
-    .stButton > button {
-        background-color: var(--btn-bg) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 8px !important;
-        color: var(--text-primary) !important;
-        padding: 10px 20px !important;
-        font-weight: 500 !important;
-        transition: all 0.2s !important;
-    }
-    .stButton > button:hover {
-        background-color: var(--btn-hover) !important;
-        border-color: var(--border-hover) !important;
-    }
-
-    /* ── Account grid buttons (override the inline Streamlit block) ── */
-    div[data-testid="stHorizontalBlock"] .stButton > button {
-        background-color: var(--bg-card) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 12px !important;
-        padding: 20px !important;
-        text-align: left !important;
-        height: auto !important;
-        min-height: 80px !important;
-        white-space: normal !important;
-        line-height: 1.5 !important;
-        color: var(--text-primary) !important;
-        font-size: 15px !important;
-        font-weight: 500 !important;
-        transition: all 0.2s ease !important;
-    }
-    div[data-testid="stHorizontalBlock"] .stButton > button:hover {
-        border-color: var(--border-hover) !important;
-        background-color: var(--btn-hover) !important;
-        transform: translateY(-2px) !important;
-        box-shadow: 0 8px 16px var(--shadow-hover) !important;
-    }
-
-    /* ── Selectbox / Date / Multiselect ── */
-    .stSelectbox > div > div,
-    .stDateInput > div > div,
-    .stMultiSelect > div {
-        background-color: var(--input-bg) !important;
-        border: 1px solid var(--border) !important;
-        border-radius: 8px !important;
-        color: var(--text-primary) !important;
-    }
-    .stSelectbox label,
-    .stDateInput label,
-    .stMultiSelect label { color: var(--text-primary) !important; font-weight: 500 !important; }
-    .stDateInput input   { color: var(--text-primary) !important; }
-    .stMultiSelect span  { color: var(--text-primary) !important; }
-
-    /* ── Dataframe ── */
-    .stDataFrame,
-    .stDataFrame thead th,
-    .stDataFrame tbody td {
-        background-color: var(--bg-card) !important;
-        color: var(--text-primary) !important;
-    }
-
-    /* ── Date range card ── */
-    .date-range-section {
-        background-color: var(--bg-card);
-        border: 1px solid var(--border);
-        border-radius: 12px; padding: 20px 16px; margin-top: 24px;
-    }
-    .date-range-title { color: var(--text-primary) !important; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
-
-    /* ── Misc ── */
+    .main-title { color: #5b7bfc; font-size: 36px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
+    .main-subtitle { color: #6b7280; font-size: 16px; font-weight: 400; margin-bottom: 24px; }
+    .section-title { color: #ffffff; font-size: 24px; font-weight: 600; margin-bottom: 24px; margin-top: 40px; }
+    .last-updated { color: #6b7280; font-size: 12px; margin-top: 6px; margin-bottom: 16px; }
+    .account-card { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 12px; padding: 28px 24px; margin-bottom: 20px; transition: all 0.2s ease; cursor: pointer; }
+    .account-card:hover { border-color: #5b7bfc; background-color: #121212; transform: translateY(-2px); box-shadow: 0 8px 16px rgba(91, 123, 252, 0.15); }
+    .date-range-title { color: #ffffff; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
     .stRadio > label { display: none; }
-    hr               { border-color: var(--border) !important; }
+    div[data-testid="metric-container"] { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 12px; padding: 20px; }
+    div[data-testid="metric-container"] label { color: #6b7280; font-size: 14px; }
+    div[data-testid="metric-container"] [data-testid="stMetricValue"] { color: #ffffff; font-size: 28px; font-weight: 700; }
+    .stButton > button { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 8px; color: #ffffff; padding: 10px 20px; font-weight: 500; transition: all 0.2s; }
+    .stButton > button:hover { background-color: #1a1a1a; border-color: #2a2a2a; }
+    .stSelectbox > div > div { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 8px; }
+    .stSelectbox label { color: #ffffff; font-weight: 500; }
     .block-container { padding-top: 3rem; padding-bottom: 1rem; }
-    p, span, div, h1, h2, h3, h4, label, li { color: var(--text-primary); }
-    .stCaption, small { color: var(--text-secondary) !important; }
-
-    /* ── Channel toggle mini-buttons ── */
-    .ch-toggle button {
-        font-size: 11px !important; padding: 3px 8px !important;
-        min-height: 26px !important; height: 26px !important;
-        border-radius: 6px !important;
-        background-color: var(--btn-hover) !important;
-        border: 1px solid var(--border) !important;
-        color: var(--text-secondary) !important; font-weight: 400 !important;
-    }
-    .ch-toggle button:hover {
-        background-color: var(--btn-bg) !important;
-        color: var(--text-primary) !important;
-        border-color: var(--border-hover) !important;
-    }
+    .ch-toggle button { font-size: 11px !important; padding: 3px 8px !important; min-height: 26px !important; height: 26px !important; border-radius: 6px !important; background-color: #1a1a1a !important; border: 1px solid #2a2a2a !important; color: #9ca3af !important; font-weight: 400 !important; }
+    .ch-toggle button:hover { background-color: #2a2a2a !important; color: #ffffff !important; border-color: #3a3a3a !important; }
+    /* Date filter bar at top of each page */
+    .date-filter-bar { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 12px; padding: 14px 20px; margin-bottom: 28px; }
+    .date-filter-label { color: #6b7280; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -231,17 +91,21 @@ def apply_styles():
 def trigger_scraper():
     if not GITHUB_TOKEN or not GITHUB_REPO or not GITHUB_WORKFLOW:
         return False, "GitHub secrets not configured."
+
     url = f"https://api.github.com/repos/{GITHUB_REPO}/actions/workflows/{GITHUB_WORKFLOW}/dispatches"
     headers = {
         "Authorization": f"Bearer {GITHUB_TOKEN}",
         "Accept": "application/vnd.github+json",
         "X-GitHub-Api-Version": "2022-11-28",
     }
+    payload = {"ref": "main"}
+
     try:
-        resp = requests.post(url, headers=headers, json={"ref": "main"}, timeout=10)
+        resp = requests.post(url, headers=headers, json=payload, timeout=10)
         if resp.status_code == 204:
-            return True, "✅ Scraper triggered! Data will update in ~10–15 minutes."
-        return False, f"❌ Failed: {resp.status_code} — {resp.text}"
+            return True, "✅ Scraper triggered! Data will be updated in approximately 10–15 minutes. Please avoid clicking the button repeatedly and allow the scraping process to complete."
+        else:
+            return False, f"❌ Failed: {resp.status_code} — {resp.text}"
     except Exception as e:
         return False, f"❌ Error: {e}"
 
@@ -261,12 +125,22 @@ def get_last_scrape_time():
 @st.cache_data(ttl=300)
 def load_data(cache_key):
     try:
-        response = supabase.table("posts").select("*").order("post_time", desc=True).limit(1000).execute()
+        response = supabase.table("posts") \
+            .select("*") \
+            .order("post_time", desc=True) \
+            .limit(1000) \
+            .execute()
+
         data = response.data
+
         if not data:
             st.warning("⚠️ No data found in database")
             return pd.DataFrame()
-        return pd.DataFrame(data)
+
+        df = pd.DataFrame(data)
+        logger.info(f"Loaded {len(df)} rows from Supabase")
+        return df
+
     except Exception as e:
         st.error(f"❌ Supabase error: {e}")
         st.stop()
@@ -288,7 +162,8 @@ def preprocess(df):
         df["post_id"] = df["post_link"].apply(
             lambda x: x.split("/")[-2] if pd.notna(x) and "/" in str(x) else ""
         )
-    return df.dropna(subset=["username"])
+    df = df.dropna(subset=["username"])
+    return df
 
 # -----------------------
 # Utilities
@@ -309,13 +184,88 @@ def get_logo_path(username):
     return path if os.path.exists(path) else None
 
 # -----------------------
+# Shared: Date Filter Bar
+# (rendered at top of each page, returns (start, end))
+# -----------------------
+def render_date_filter(df, page_key):
+    """
+    Renders a compact date filter bar at the top of a page.
+    Uses page_key to give each page its own independent session-state keys
+    so switching pages doesn't reset the dates.
+    Returns (start_date, end_date).
+    """
+    min_date    = df["post_date"].min()
+    max_date    = df["post_date"].max()
+    today       = date.today()
+    default_day = min(max(today, min_date), max_date)
+
+    start_key = f"date_start_{page_key}"
+    end_key   = f"date_end_{page_key}"
+
+    if start_key not in st.session_state:
+        st.session_state[start_key] = default_day
+    if end_key not in st.session_state:
+        st.session_state[end_key] = default_day
+
+    st.markdown('<div class="date-filter-bar">', unsafe_allow_html=True)
+    col_label, col_start, col_sep, col_end, col_reset = st.columns([2, 3, 0.3, 3, 1.5])
+
+    with col_label:
+        st.markdown(
+            '<div style="color:#6b7280;font-size:13px;font-weight:600;padding-top:6px;">📅 Date Range</div>',
+            unsafe_allow_html=True
+        )
+    with col_start:
+        start = st.date_input(
+            "From", min_value=min_date, max_value=max_date,
+            key=start_key, label_visibility="collapsed"
+        )
+    with col_sep:
+        st.markdown(
+            '<div style="text-align:center;color:#6b7280;padding-top:6px;font-size:16px;">→</div>',
+            unsafe_allow_html=True
+        )
+    with col_end:
+        end = st.date_input(
+            "To", min_value=min_date, max_value=max_date,
+            key=end_key, label_visibility="collapsed"
+        )
+    with col_reset:
+        if st.button("Reset", key=f"reset_{page_key}", use_container_width=True):
+            st.session_state[start_key] = default_day
+            st.session_state[end_key]   = default_day
+            st.rerun()
+
+    st.markdown('</div>', unsafe_allow_html=True)
+    return start, end
+
+# -----------------------
 # Views
 # -----------------------
 def render_accounts(df):
+    # ── Date filter at top ──────────────────────────────────────────────────
+    start, end = render_date_filter(df, page_key="accounts")
+    df = filter_by_date(df, start, end)
+
     st.markdown('<div class="section-title">Select Account</div>', unsafe_allow_html=True)
     stats = df.groupby("username").agg({'post_id': 'count', 'likes': 'sum'}).reset_index()
     stats.columns = ['username', 'posts', 'total_likes']
     stats = stats.sort_values('total_likes', ascending=False).reset_index(drop=True)
+
+    st.markdown("""
+    <style>
+    div[data-testid="stHorizontalBlock"] .stButton > button {
+        background-color: #0f0f0f !important; border: 1px solid #1f1f1f !important;
+        border-radius: 12px !important; padding: 20px !important; text-align: left !important;
+        height: auto !important; min-height: 80px !important; white-space: normal !important;
+        line-height: 1.5 !important; color: #ffffff !important; font-size: 15px !important;
+        font-weight: 500 !important; transition: all 0.2s ease !important;
+    }
+    div[data-testid="stHorizontalBlock"] .stButton > button:hover {
+        border-color: #5b7bfc !important; background-color: #121212 !important;
+        transform: translateY(-2px) !important; box-shadow: 0 8px 16px rgba(91,123,252,0.15) !important;
+    }
+    </style>""", unsafe_allow_html=True)
 
     cols = st.columns(3)
     for idx, row in stats.iterrows():
@@ -334,18 +284,21 @@ def render_accounts(df):
                     st.image(logo_path, width=56)
                 else:
                     st.markdown(f"""
-                        <div style="width:52px;height:52px;border-radius:8px;
-                            background:var(--logo-fallback);
+                        <div style="width:52px;height:52px;border-radius:8px;background:#1a1a2e;
                             display:flex;align-items:center;justify-content:center;
-                            border:1px solid var(--border);color:var(--accent);
-                            font-size:22px;font-weight:700;">
+                            border:1px solid #2a2a2a;color:#5b7bfc;font-size:22px;font-weight:700;">
                             {row['username'][0].upper()}
                         </div>""", unsafe_allow_html=True)
 
+
 def render_account_detail(df, username):
+    # ── Date filter at top ──────────────────────────────────────────────────
+    start, end = render_date_filter(df, page_key="account_detail")
+    df = filter_by_date(df, start, end)
+
     account_df = df[df["username"] == username].copy()
     if account_df.empty:
-        st.warning(f"No data for @{username}")
+        st.warning(f"No data for @{username} in the selected date range.")
         return
 
     col1, col2 = st.columns([8, 1])
@@ -383,7 +336,12 @@ def render_account_detail(df, username):
                 st.metric("💬", f"{row['comments']:,}")
         st.markdown("---")
 
+
 def render_analytics(df):
+    # ── Date filter at top ──────────────────────────────────────────────────
+    start, end = render_date_filter(df, page_key="analytics")
+    df = filter_by_date(df, start, end)
+
     st.markdown('<div class="section-title">Analytics Overview</div>', unsafe_allow_html=True)
     if df.empty:
         st.warning("No data available for the selected date range.")
@@ -438,11 +396,21 @@ def render_analytics(df):
         ).properties(height=340)
         st.altair_chart(bar, use_container_width=True)
 
+
 def render_top_posts(df):
+    # ── Date filter at top ──────────────────────────────────────────────────
+    start, end = render_date_filter(df, page_key="top_posts")
+    df = filter_by_date(df, start, end)
+
     st.markdown('<div class="section-title">Top Posts</div>', unsafe_allow_html=True)
+
     col1, col2 = st.columns(2)
     with col1: n = st.selectbox("Show top", [10, 20, 30, 50], key="top_n")
     with col2: metric = st.selectbox("Ranked by", ["Latest", "Likes", "Comments"], key="metric")
+
+    if df.empty:
+        st.warning("No data available for the selected date range.")
+        return
 
     if metric == "Latest":
         top = df.sort_values('posted_at_dt', ascending=False).head(n)
@@ -472,6 +440,7 @@ def render_top_posts(df):
                 st.metric("💬", f"{row['comments']:,}")
         st.markdown("---")
 
+
 # -----------------------
 # Auth
 # -----------------------
@@ -483,13 +452,10 @@ def check_auth():
 
     st.markdown("""
     <style>
-    .login-wrap {
-        max-width:380px; margin:120px auto 0 auto;
-        background:var(--bg-card); border:1px solid var(--border);
-        border-radius:16px; padding:40px 36px; text-align:center;
-    }
-    .login-title { color:var(--accent); font-size:26px; font-weight:700; margin-bottom:6px; }
-    .login-sub   { color:var(--text-secondary); font-size:14px; margin-bottom:28px; }
+    .login-wrap { max-width:380px; margin:120px auto 0 auto; background:#0f0f0f;
+        border:1px solid #1f1f1f; border-radius:16px; padding:40px 36px; text-align:center; }
+    .login-title { color:#5b7bfc; font-size:26px; font-weight:700; margin-bottom:6px; }
+    .login-sub { color:#6b7280; font-size:14px; margin-bottom:28px; }
     </style>""", unsafe_allow_html=True)
 
     st.markdown('<div class="login-wrap">', unsafe_allow_html=True)
@@ -507,6 +473,7 @@ def check_auth():
             else:
                 st.error("❌ Incorrect password. Try again.")
     return False
+
 
 # -----------------------
 # Main
@@ -529,19 +496,11 @@ def main():
         df = preprocess(df)
 
     with st.sidebar:
-        st.markdown(f'<div style="color:var(--accent);font-size:20px;font-weight:700;margin-bottom:2px;">{APP_TITLE}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div style="color:var(--text-secondary);font-size:12px;margin-bottom:16px;">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="color:#5b7bfc;font-size:20px;font-weight:700;margin-bottom:2px;">{APP_TITLE}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="color:#6b7280;font-size:12px;margin-bottom:16px;">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
 
         last_updated = get_last_scrape_time()
         st.markdown(f'<div class="last-updated">🕒 Last scraped: {last_updated}</div>', unsafe_allow_html=True)
-
-        # ── Scheduler info ──
-        st.markdown("""
-        <div class="scheduler-info">
-            <strong> Auto-scrape schedule (IST)</strong>
-            <span>9:00 AM &nbsp;·&nbsp; 11:00 AM &nbsp;·&nbsp; 1:00 PM &nbsp;·&nbsp; 2:30 PM &nbsp;·&nbsp; 5:30 PM</span>
-        </div>
-        """, unsafe_allow_html=True)
 
         if st.button("🚀 Run Scraper Now", use_container_width=True):
             with st.spinner("Triggering scraper..."):
@@ -568,23 +527,7 @@ def main():
             st.cache_data.clear()
             st.rerun()
 
-        st.markdown('<div class="date-range-section">', unsafe_allow_html=True)
-        st.markdown('<div class="date-range-title">Date Range</div>', unsafe_allow_html=True)
-
-        min_date     = df["post_date"].min()
-        max_date     = df["post_date"].max()
-        today        = date.today()
-        default_date = min(max(today, min_date), max_date)
-
-        if 'start' not in st.session_state:
-            st.session_state['start'] = default_date
-        if 'end' not in st.session_state:
-            st.session_state['end'] = default_date
-
-        start = st.date_input("Start", min_value=min_date, max_value=max_date, key="start")
-        end   = st.date_input("End",   min_value=min_date, max_value=max_date, key="end")
-        st.markdown('</div>', unsafe_allow_html=True)
-
+        # ── Channel filter stays in sidebar ────────────────────────────────
         st.markdown("---")
         st.markdown('<div class="date-range-title">Filter Channels</div>', unsafe_allow_html=True)
         all_channels = sorted(df["username"].unique().tolist())
@@ -614,8 +557,8 @@ def main():
         if not selected_channels:
             selected_channels = all_channels
 
-    filtered_df = filter_by_date(df, start, end)
-    filtered_df = filtered_df[filtered_df["username"].isin(selected_channels)]
+    # Apply only the channel filter here; date filter is handled per-page
+    filtered_df = df[df["username"].isin(selected_channels)]
 
     st.markdown(f'<div class="main-title">{APP_TITLE}</div>', unsafe_allow_html=True)
     st.markdown(f'<div class="main-subtitle">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
@@ -631,3 +574,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+#git add . && git commit -m "update" && git pull origin main --rebase && git push origin main
