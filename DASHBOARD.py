@@ -45,53 +45,276 @@ LOGO_MAP = {
 
 st.set_page_config(page_title=APP_TITLE, layout="wide", initial_sidebar_state="expanded")
 
+# ============================================================
+# THEME — CSS variables, auto light/dark via prefers-color-scheme
+# ============================================================
 def apply_styles():
     st.markdown("""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+    /* ── CSS variable tokens ── */
+    :root {
+        --bg:           #ffffff;
+        --bg-secondary: #f8f9fa;
+        --bg-card:      #ffffff;
+        --bg-card2:     #f1f3f9;
+        --border:       #e2e6ef;
+        --border2:      #d0d5e8;
+        --text:         #111827;
+        --text-muted:   #6b7280;
+        --text-subtle:  #9ca3af;
+        --accent:       #4f6ef7;
+        --accent2:      #7c5cfc;
+        --accent-light: #eef1fe;
+        --danger:       #ef4444;
+        --success:      #22c55e;
+        --warning:      #f59e0b;
+        --sidebar-bg:   #f4f6fb;
+        --sidebar-border: #e2e6ef;
+    }
+
+    @media (prefers-color-scheme: dark) {
+        :root {
+            --bg:           #000000;
+            --bg-secondary: #0a0a0a;
+            --bg-card:      #0f0f0f;
+            --bg-card2:     #111827;
+            --border:       #1f1f1f;
+            --border2:      #2a2a4a;
+            --text:         #f1f5f9;
+            --text-muted:   #6b7280;
+            --text-subtle:  #4b5563;
+            --accent:       #5b7bfc;
+            --accent2:      #a78bfa;
+            --accent-light: #1a1a3a;
+            --danger:       #ef4444;
+            --success:      #22c55e;
+            --warning:      #f59e0b;
+            --sidebar-bg:   #0a0a0a;
+            --sidebar-border: #1a1a1a;
+        }
+    }
+
+    /* ── Base ── */
     * { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
-    .stApp { background-color: #000000; }
-    [data-testid="stSidebar"] { background-color: #0a0a0a; border-right: 1px solid #1a1a1a; }
-    [data-testid="stSidebar"] .stMarkdown { color: #ffffff; }
+
+    .stApp {
+        background-color: var(--bg) !important;
+        color: var(--text) !important;
+    }
+
+    /* ── Sidebar ── */
+    [data-testid="stSidebar"] {
+        background-color: var(--sidebar-bg) !important;
+        border-right: 1px solid var(--sidebar-border) !important;
+    }
+    [data-testid="stSidebar"] * { color: var(--text) !important; }
+
+    /* ── Streamlit overrides ── */
+    .stMarkdown, .stText, p, span, div { color: var(--text); }
     footer { visibility: hidden; }
-    .main-title { color: #5b7bfc; font-size: 36px; font-weight: 700; margin-bottom: 4px; letter-spacing: -0.5px; }
-    .main-subtitle { color: #6b7280; font-size: 16px; font-weight: 400; margin-bottom: 24px; }
-    .section-title { color: #ffffff; font-size: 24px; font-weight: 600; margin-bottom: 24px; margin-top: 40px; }
-    .last-updated { color: #6b7280; font-size: 12px; margin-top: 6px; margin-bottom: 16px; }
-    .account-card { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 12px; padding: 28px 24px; margin-bottom: 20px; }
-    .date-range-title { color: #ffffff; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
-    .stRadio > label { display: none; }
-    div[data-testid="metric-container"] { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 12px; padding: 20px; }
-    div[data-testid="metric-container"] label { color: #6b7280; font-size: 14px; }
-    div[data-testid="metric-container"] [data-testid="stMetricValue"] { color: #ffffff; font-size: 28px; font-weight: 700; }
-    .stButton > button { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 8px; color: #ffffff; padding: 10px 20px; font-weight: 500; transition: all 0.2s; }
-    .stButton > button:hover { background-color: #1a1a1a; border-color: #2a2a2a; }
-    .stSelectbox > div > div { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 8px; }
-    .stSelectbox label { color: #ffffff; font-weight: 500; }
+
+    /* ── Typography ── */
+    .main-title {
+        color: var(--accent) !important;
+        font-size: 36px; font-weight: 700;
+        margin-bottom: 4px; letter-spacing: -0.5px;
+    }
+    .main-subtitle {
+        color: var(--text-muted) !important;
+        font-size: 16px; font-weight: 400; margin-bottom: 24px;
+    }
+    .section-title {
+        color: var(--text) !important;
+        font-size: 24px; font-weight: 600;
+        margin-bottom: 24px; margin-top: 40px;
+    }
+    .last-updated { color: var(--text-muted) !important; font-size: 12px; margin-top: 6px; margin-bottom: 16px; }
+    .date-range-title { color: var(--text) !important; font-size: 14px; font-weight: 600; margin-bottom: 16px; }
+
+    /* ── Metric cards ── */
+    div[data-testid="metric-container"] {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px !important; padding: 20px !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+    div[data-testid="metric-container"] label { color: var(--text-muted) !important; font-size: 14px !important; }
+    div[data-testid="metric-container"] [data-testid="stMetricValue"] { color: var(--text) !important; font-size: 28px !important; font-weight: 700 !important; }
+
+    /* ── Buttons ── */
+    .stButton > button {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important; color: var(--text) !important;
+        padding: 10px 20px !important; font-weight: 500 !important; transition: all 0.2s !important;
+    }
+    .stButton > button:hover {
+        background-color: var(--accent-light) !important;
+        border-color: var(--accent) !important;
+        color: var(--accent) !important;
+    }
+
+    /* ── Selectbox ── */
+    .stSelectbox > div > div {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 8px !important; color: var(--text) !important;
+    }
+    .stSelectbox label { color: var(--text) !important; font-weight: 500 !important; }
+
+    /* ── Text inputs ── */
+    .stTextInput > div > div > input {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--text) !important; border-radius: 8px !important;
+    }
+
+    /* ── Multiselect ── */
+    .stMultiSelect > div > div {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border) !important; border-radius: 8px !important;
+    }
+    .stMultiSelect label { color: var(--text) !important; }
+
+    /* ── Date input ── */
+    .stDateInput > div > div > input {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--text) !important;
+    }
+
+    /* ── Dataframe ── */
+    .stDataFrame { border: 1px solid var(--border) !important; border-radius: 8px !important; }
+
     .block-container { padding-top: 3rem; padding-bottom: 1rem; }
-    .ch-toggle button { font-size: 11px !important; padding: 3px 8px !important; min-height: 26px !important; height: 26px !important; border-radius: 6px !important; background-color: #1a1a1a !important; border: 1px solid #2a2a2a !important; color: #9ca3af !important; font-weight: 400 !important; }
-    .ch-toggle button:hover { background-color: #2a2a2a !important; color: #ffffff !important; border-color: #3a3a3a !important; }
-    .date-filter-bar { background-color: #0f0f0f; border: 1px solid #1f1f1f; border-radius: 12px; padding: 14px 20px; margin-bottom: 28px; }
-    .ai-box { background: linear-gradient(135deg, #0f0f1a 0%, #0a0a0f 100%); border: 1px solid #2a2a4a; border-radius: 16px; padding: 24px 28px; margin-bottom: 20px; position: relative; overflow: hidden; }
-    .ai-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, #5b7bfc, #a78bfa, #5b7bfc); }
-    .ai-box-title { color: #a78bfa; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 14px; }
-    .ai-box-body { color: #e2e8f0; font-size: 14px; line-height: 1.85; }
-    .ai-badge { display: inline-flex; align-items: center; background: linear-gradient(135deg, #1a1a3a, #0f0f2a); border: 1px solid #3a3a6a; border-radius: 20px; padding: 4px 14px; font-size: 12px; color: #a78bfa; font-weight: 600; margin-bottom: 20px; }
-    .stat-card { background: #0f0f1a; border: 1px solid #1f1f3a; border-radius: 12px; padding: 16px 20px; text-align: center; }
-    .stat-label { color: #6b7280; font-size: 12px; font-weight: 500; margin-bottom: 4px; }
-    .stat-value { color: #ffffff; font-size: 22px; font-weight: 700; }
+
+    /* ── Channel toggle buttons ── */
+    .ch-toggle button {
+        font-size: 11px !important; padding: 3px 8px !important;
+        min-height: 26px !important; height: 26px !important;
+        border-radius: 6px !important;
+        background-color: var(--bg-secondary) !important;
+        border: 1px solid var(--border) !important;
+        color: var(--text-muted) !important; font-weight: 400 !important;
+    }
+    .ch-toggle button:hover {
+        background-color: var(--accent-light) !important;
+        color: var(--accent) !important; border-color: var(--accent) !important;
+    }
+
+    /* ── Date filter bar ── */
+    .date-filter-bar {
+        background-color: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px !important; padding: 14px 20px !important; margin-bottom: 28px !important;
+    }
+
+    /* ── AI boxes ── */
+    .ai-box {
+        background: var(--bg-card2) !important;
+        border: 1px solid var(--border2) !important;
+        border-radius: 16px !important; padding: 24px 28px !important;
+        margin-bottom: 20px !important; position: relative !important; overflow: hidden !important;
+        box-shadow: 0 2px 8px rgba(79,110,247,0.07);
+    }
+    .ai-box::before {
+        content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+        background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
+    }
+    .ai-box-title {
+        color: var(--accent2) !important; font-size: 12px !important;
+        font-weight: 700 !important; text-transform: uppercase !important;
+        letter-spacing: 1.2px !important; margin-bottom: 14px !important;
+    }
+    .ai-box-body { color: var(--text) !important; font-size: 14px !important; line-height: 1.85 !important; }
+
+    /* ── AI badge ── */
+    .ai-badge {
+        display: inline-flex; align-items: center;
+        background: var(--accent-light) !important;
+        border: 1px solid var(--accent) !important;
+        border-radius: 20px; padding: 4px 14px;
+        font-size: 12px; color: var(--accent) !important; font-weight: 600; margin-bottom: 20px;
+    }
+
+    /* ── Stat cards ── */
+    .stat-card {
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius: 12px !important; padding: 16px 20px !important; text-align: center !important;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    }
+    .stat-label { color: var(--text-muted) !important; font-size: 12px !important; font-weight: 500 !important; margin-bottom: 4px !important; }
+    .stat-value { color: var(--text) !important; font-size: 22px !important; font-weight: 700 !important; }
+
+    /* ── Pills ── */
     .cat-pill { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; margin: 3px; }
+
+    /* ── Tables ── */
     .missed-table { width:100%; border-collapse:collapse; font-size:13px; }
-    .missed-table th { background:#1a1a2e; color:#a78bfa; padding:10px 12px; text-align:left; font-size:11px; font-weight:700; text-transform:uppercase; border-bottom:1px solid #2a2a4a; }
-    .missed-table td { padding:10px 12px; border-bottom:1px solid #1a1a2a; vertical-align:top; line-height:1.6; }
+    .missed-table th {
+        background: var(--accent-light) !important; color: var(--accent2) !important;
+        padding:10px 12px; text-align:left; font-size:11px; font-weight:700;
+        text-transform:uppercase; border-bottom: 1px solid var(--border2);
+    }
+    .missed-table td {
+        padding:10px 12px; border-bottom: 1px solid var(--border);
+        vertical-align:top; line-height:1.6; color: var(--text) !important;
+    }
+    .missed-table tr:hover td { background: var(--bg-secondary) !important; }
+
     .heatmap-tbl { width:100%; border-collapse:collapse; font-size:12px; }
-    .heatmap-tbl th { background:#1a1a2e; color:#a78bfa; padding:9px 6px; text-align:center; font-size:10px; font-weight:700; border-bottom:1px solid #2a2a4a; white-space:nowrap; }
+    .heatmap-tbl th {
+        background: var(--accent-light) !important; color: var(--accent2) !important;
+        padding:9px 6px; text-align:center; font-size:10px; font-weight:700;
+        border-bottom: 1px solid var(--border2); white-space:nowrap;
+    }
     .heatmap-tbl th:first-child { text-align:left; min-width:110px; }
-    .heatmap-tbl td { padding:7px 6px; border-bottom:1px solid #111; text-align:center; font-size:12px; }
+    .heatmap-tbl td { padding:7px 6px; border-bottom: 1px solid var(--border); text-align:center; font-size:12px; color: var(--text); }
     .heatmap-tbl td:first-child { text-align:left; }
+    .heatmap-tbl tr:hover td { background: var(--bg-secondary) !important; }
+
+    /* ── Login box ── */
+    .login-wrap {
+        max-width:380px; margin:120px auto 0 auto;
+        background: var(--bg-card) !important;
+        border: 1px solid var(--border) !important;
+        border-radius:16px; padding:40px 36px; text-align:center;
+        box-shadow: 0 4px 24px rgba(79,110,247,0.10);
+    }
+    .login-title { color: var(--accent) !important; font-size:26px; font-weight:700; margin-bottom:6px; }
+    .login-sub { color: var(--text-muted) !important; font-size:14px; margin-bottom:28px; }
+
+    /* ── Altair/Vega chart backgrounds ── */
+    .vega-embed { background: transparent !important; }
+    canvas { background: transparent !important; }
+
+    /* ── Streamlit alert boxes ── */
+    .stAlert { border-radius: 10px !important; }
+
+    /* ── Spinner ── */
+    .stSpinner > div { border-top-color: var(--accent) !important; }
+
     </style>
+
+    <script>
+    // Sync Streamlit's own theme toggle with OS preference on first load
+    (function() {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        // Streamlit stores theme in localStorage
+        const stored = localStorage.getItem('stActiveTheme');
+        if (!stored) {
+            localStorage.setItem('stActiveTheme', prefersDark ? 'Dark' : 'Light');
+        }
+    })();
+    </script>
     """, unsafe_allow_html=True)
 
+# ============================================================
+# GITHUB / SCRAPER
+# ============================================================
 def trigger_scraper():
     if not GITHUB_TOKEN or not GITHUB_REPO or not GITHUB_WORKFLOW:
         return False, "GitHub secrets not configured."
@@ -115,6 +338,9 @@ def get_last_scrape_time():
         pass
     return "Unknown"
 
+# ============================================================
+# DATA LOADING
+# ============================================================
 @st.cache_data(ttl=300)
 def load_data(cache_key):
     try:
@@ -145,6 +371,9 @@ def preprocess(df):
             lambda x: x.split("/")[-2] if pd.notna(x) and "/" in str(x) else "")
     return df.dropna(subset=["username"])
 
+# ============================================================
+# UTILITIES
+# ============================================================
 def format_number(num):
     if num >= 1_000_000: return f"{num/1_000_000:.1f}M"
     elif num >= 1_000:   return f"{num/1_000:.1f}K"
@@ -170,9 +399,9 @@ def render_date_filter(df, page_key):
     if ek not in st.session_state: st.session_state[ek] = default_day
     st.markdown('<div class="date-filter-bar">', unsafe_allow_html=True)
     c1, c2, c3, c4, c5 = st.columns([2, 3, 0.3, 3, 1.5])
-    with c1: st.markdown('<div style="color:#6b7280;font-size:13px;font-weight:600;padding-top:6px;">📅 Date Range</div>', unsafe_allow_html=True)
+    with c1: st.markdown('<div style="color:var(--text-muted);font-size:13px;font-weight:600;padding-top:6px;">📅 Date Range</div>', unsafe_allow_html=True)
     with c2: start = st.date_input("From", min_value=min_date, max_value=max_date, key=sk, label_visibility="collapsed")
-    with c3: st.markdown('<div style="text-align:center;color:#6b7280;padding-top:6px;">→</div>', unsafe_allow_html=True)
+    with c3: st.markdown('<div style="text-align:center;color:var(--text-muted);padding-top:6px;">→</div>', unsafe_allow_html=True)
     with c4: end = st.date_input("To", min_value=min_date, max_value=max_date, key=ek, label_visibility="collapsed")
     with c5:
         if st.button("Reset", key=f"reset_{page_key}", use_container_width=True):
@@ -182,9 +411,9 @@ def render_date_filter(df, page_key):
     st.markdown('</div>', unsafe_allow_html=True)
     return start, end
 
-# ===========================================================================
-# AI INSIGHTS — plain text approach, no JSON parsing
-# ===========================================================================
+# ============================================================
+# AI INSIGHTS
+# ============================================================
 TOI_USERNAME = "timesofindia"
 
 CATEGORIES  = ["Politics","Crime","Entertainment","Sports","Business",
@@ -195,17 +424,6 @@ CAT_COLORS  = {
     "Technology":"#8b5cf6","Health":"#ec4899","Lifestyle":"#f59e0b",
     "Viral/Human Interest":"#10b981",
 }
-
-# Section markers — Gemini must use these exactly
-SECTION_KEYS = [
-    "TOI_VS_COMPETITION",
-    "BIGGEST_THREAT",
-    "MISSED_OPPORTUNITIES",
-    "CAPTION_IDEAS",
-    "HASHTAGS",
-    "ACTION_PLAN",
-    "CATEGORY_BREAKDOWN",
-]
 
 def build_payload(df):
     from collections import Counter
@@ -262,18 +480,17 @@ def build_payload(df):
 
     return {"data_date": data_date, "total_posts": len(tdf),
             "platforms": platforms, "missed": missed,
-            "viral": viral, "toi_best_hours": best_hrs,
-            "toi_df_raw": tdf}
+            "viral": viral, "toi_best_hours": best_hrs}
 
 
 def call_gemini(payload):
     if not GEMINI_API_KEY:
         return "ERROR: GEMINI_API_KEY not set."
 
-    toi  = payload["platforms"].get(TOI_USERNAME, {})
-    rivals = {k: v for k, v in payload["platforms"].items() if k != TOI_USERNAME}
-    cats = ", ".join(CATEGORIES)
-    channels = list(payload["platforms"].keys())
+    toi     = payload["platforms"].get(TOI_USERNAME, {})
+    rivals  = {k: v for k, v in payload["platforms"].items() if k != TOI_USERNAME}
+    cats    = ", ".join(CATEGORIES)
+    channels= list(payload["platforms"].keys())
 
     prompt = f"""You are a senior social media strategist for Times of India (TOI) Instagram team.
 Analyse today's data and return your response using EXACTLY the section markers below.
@@ -320,30 +537,34 @@ Politics:[n] Crime:[n] Entertainment:[n] Sports:[n] Business:[n] International:[
 Categories to use: {cats}
 """
 
-    try:
-        resp = requests.post(
-            f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}",
-            headers={"Content-Type": "application/json"},
-            json={"contents": [{"parts": [{"text": prompt}]}],
-                  "generationConfig": {"temperature": 0.4, "maxOutputTokens": 3500}},
-            timeout=90,
-        )
-        resp.raise_for_status()
-        return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except requests.exceptions.Timeout:
-        return "ERROR: Request timed out."
-    except requests.exceptions.HTTPError as e:
-        return f"ERROR: API {e.response.status_code}"
-    except Exception as e:
-        return f"ERROR: {e}"
+    url  = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={GEMINI_API_KEY}"
+    body = {"contents": [{"parts": [{"text": prompt}]}],
+            "generationConfig": {"temperature": 0.4, "maxOutputTokens": 3500}}
+
+    for attempt in range(3):
+        try:
+            resp = requests.post(url, headers={"Content-Type": "application/json"}, json=body, timeout=90)
+            if resp.status_code == 503:
+                time.sleep(10 * (attempt + 1))
+                continue
+            resp.raise_for_status()
+            return resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+        except requests.exceptions.Timeout:
+            if attempt < 2: time.sleep(5); continue
+            return "ERROR: Request timed out after 3 attempts."
+        except requests.exceptions.HTTPError as e:
+            code = e.response.status_code
+            if code == 503 and attempt < 2: time.sleep(10 * (attempt + 1)); continue
+            return f"ERROR: API {code}"
+        except Exception as e:
+            return f"ERROR: {e}"
+    return "ERROR: Gemini unavailable after 3 retries. Please try again in a minute."
 
 
 def extract_sections(text):
-    """Split raw text into dict of section_key -> content using ===KEY=== markers."""
-    result = {}
+    result  = {}
     pattern = r'===([A-Z_]+)==='
     parts   = re.split(pattern, text)
-    # parts = [before_first, KEY1, content1, KEY2, content2, ...]
     for i in range(1, len(parts) - 1, 2):
         key     = parts[i].strip()
         content = parts[i + 1].strip() if i + 1 < len(parts) else ""
@@ -352,22 +573,17 @@ def extract_sections(text):
 
 
 def parse_category_breakdown(text, channels):
-    """Parse CATEGORY_BREAKDOWN section into dict of channel -> {cat: count}."""
-    result = {}
+    result    = {}
     short_map = {"Viral": "Viral/Human Interest"}
     for line_block in re.split(r'CHANNEL:\s*', text):
-        if not line_block.strip():
-            continue
-        lines = line_block.strip().splitlines()
+        if not line_block.strip(): continue
+        lines   = line_block.strip().splitlines()
         ch_line = lines[0].strip().lstrip("@").strip()
-        # Match to known channels (fuzzy)
         matched = None
         for ch in channels:
             if ch.lower() in ch_line.lower() or ch_line.lower() in ch.lower():
-                matched = ch
-                break
-        if not matched:
-            continue
+                matched = ch; break
+        if not matched: continue
         counts = {c: 0 for c in CATEGORIES}
         for line in lines[1:]:
             for token in line.split():
@@ -375,10 +591,8 @@ def parse_category_breakdown(text, channels):
                     k, _, v = token.partition(":")
                     k = short_map.get(k.strip(), k.strip())
                     if k in counts:
-                        try:
-                            counts[k] = int(v.strip())
-                        except ValueError:
-                            pass
+                        try: counts[k] = int(v.strip())
+                        except ValueError: pass
         result[matched] = counts
     return result
 
@@ -396,7 +610,7 @@ def render_ai_insights(df):
     else:
         dlabel = f"Today · {today.strftime('%d %b %Y')}"
 
-    st.markdown(f'<div style="color:#6b7280;font-size:13px;margin-bottom:20px;">📅 Analysing: <span style="color:#a78bfa;font-weight:600;">{dlabel}</span></div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="color:var(--text-muted);font-size:13px;margin-bottom:20px;">📅 Analysing: <span style="color:var(--accent2);font-weight:600;">{dlabel}</span></div>', unsafe_allow_html=True)
 
     c1, c2, c3, c4 = st.columns(4)
     for col, lbl, val in [(c1,"Posts Today",f"{len(tdf):,}"),
@@ -416,7 +630,7 @@ def render_ai_insights(df):
             if ck in st.session_state: del st.session_state[ck]
             st.rerun()
     with col_note:
-        st.markdown('<div style="color:#6b7280;font-size:12px;padding-top:12px;">Cached per snapshot. Click Re-run to refresh.</div>', unsafe_allow_html=True)
+        st.markdown('<div style="color:var(--text-muted);font-size:12px;padding-top:12px;">Cached per snapshot. Click Re-run to refresh.</div>', unsafe_allow_html=True)
 
     if ck not in st.session_state:
         with st.spinner("🤖 Analysing... 20-40 seconds"):
@@ -434,109 +648,90 @@ def render_ai_insights(df):
                     st.session_state[ck] = secs
 
     S = st.session_state.get(ck, {})
-
-    if "_error" in S:
-        st.error(S["_error"])
-        return
-
-    if not S or "_raw" not in S:
-        st.warning("No analysis available. Click Re-run.")
-        return
+    if "_error" in S: st.error(S["_error"]); return
+    if not S or "_raw" not in S: st.warning("No analysis available. Click Re-run."); return
 
     channels = S.get("_channels", [])
 
-    # ── ROW 1: TOI vs Competition | Biggest Threat ───────────────────────
+    # ROW 1
     col_l, col_r = st.columns(2)
     with col_l:
-        body = S.get("TOI_VS_COMPETITION", "No data.")
-        st.markdown(f'<div class="ai-box"><div class="ai-box-title">📊 TOI vs Competition</div><div class="ai-box-body">{body}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="ai-box"><div class="ai-box-title">📊 TOI vs Competition</div><div class="ai-box-body">{S.get("TOI_VS_COMPETITION","No data.")}</div></div>', unsafe_allow_html=True)
     with col_r:
-        body = S.get("BIGGEST_THREAT", "No data.")
-        st.markdown(f'<div class="ai-box"><div class="ai-box-title">🎯 Biggest Threat Today</div><div class="ai-box-body">{body}</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="ai-box"><div class="ai-box-title">🎯 Biggest Threat Today</div><div class="ai-box-body">{S.get("BIGGEST_THREAT","No data.")}</div></div>', unsafe_allow_html=True)
 
-    # ── MISSED OPPORTUNITIES TABLE ────────────────────────────────────────
+    # MISSED OPPORTUNITIES
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### ⚡ Missed Opportunities")
-    missed_raw = S.get("MISSED_OPPORTUNITIES", "")
+    missed_raw  = S.get("MISSED_OPPORTUNITIES", "")
     caption_raw = S.get("CAPTION_IDEAS", "")
-
-    # Parse missed lines: TOPIC: x | RIVAL: @y | THEIR LIKES: z
     missed_rows = []
     for line in missed_raw.splitlines():
         m = re.match(r'TOPIC:\s*(.+?)\s*\|\s*RIVAL:\s*@?(\S+)\s*\|\s*THEIR LIKES:\s*([\d,KkMm]+)', line)
         if m:
-            topic, rival, likes_str = m.group(1).strip(), m.group(2).strip(), m.group(3).strip()
-            # Try to find matching caption
-            cap_match = re.search(rf'CAPTION FOR {re.escape(topic.upper())}[:\s]*\n(.*?)(?=\nCAPTION FOR|\Z)', caption_raw, re.DOTALL | re.IGNORECASE)
-            caption = cap_match.group(1).strip() if cap_match else ""
-            missed_rows.append((topic, rival, likes_str, caption))
+            topic, rival, lk = m.group(1).strip(), m.group(2).strip(), m.group(3).strip()
+            cap_m = re.search(rf'CAPTION FOR {re.escape(topic.upper())}[:\s]*\n(.*?)(?=\nCAPTION FOR|\Z)', caption_raw, re.DOTALL | re.IGNORECASE)
+            caption = cap_m.group(1).strip() if cap_m else ""
+            missed_rows.append((topic, rival, lk, caption))
 
     if missed_rows:
-        rows_html = "".join([f"""<tr>
-            <td style="color:#f97316;font-weight:600;">@{r}</td>
-            <td style="color:#ef4444;font-weight:700;">{lk}</td>
-            <td style="color:#fbbf24;font-weight:600;">{t}</td>
-            <td style="color:#a78bfa;font-style:italic;">{c}</td>
-        </tr>""" for t, r, lk, c in missed_rows])
-        st.markdown(f'<div style="background:#0f0f1a;border:1px solid #2a2a4a;border-radius:12px;padding:4px;overflow-x:auto;"><table class="missed-table"><thead><tr><th>Rival</th><th>Likes</th><th>Topic Missed</th><th>✍️ Caption for TOI</th></tr></thead><tbody>{rows_html}</tbody></table></div>', unsafe_allow_html=True)
+        rows_html = "".join([f'<tr><td style="color:#f97316;font-weight:600;">@{r}</td><td style="color:#ef4444;font-weight:700;">{lk}</td><td style="color:#d97706;font-weight:600;">{t}</td><td style="color:var(--accent2);font-style:italic;">{c}</td></tr>' for t, r, lk, c in missed_rows])
+        st.markdown(f'<div style="background:var(--bg-card2);border:1px solid var(--border2);border-radius:12px;padding:4px;overflow-x:auto;"><table class="missed-table"><thead><tr><th>Rival</th><th>Likes</th><th>Topic Missed</th><th>✍️ Caption for TOI</th></tr></thead><tbody>{rows_html}</tbody></table></div>', unsafe_allow_html=True)
     else:
-        # Fallback: show raw text in boxes
         col_l2, col_r2 = st.columns(2)
         with col_l2:
             st.markdown(f'<div class="ai-box"><div class="ai-box-title">⚡ Missed Opportunities</div><div class="ai-box-body">{missed_raw}</div></div>', unsafe_allow_html=True)
         with col_r2:
             st.markdown(f'<div class="ai-box"><div class="ai-box-title">✍️ Caption Ideas</div><div class="ai-box-body">{caption_raw}</div></div>', unsafe_allow_html=True)
 
-    # ── CATEGORY HEATMAP ─────────────────────────────────────────────────
+    # CATEGORY HEATMAP
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📊 Content Category Heatmap")
     cat_raw  = S.get("CATEGORY_BREAKDOWN", "")
     cat_data = parse_category_breakdown(cat_raw, channels)
-
     if cat_data:
         header = "".join([f'<th title="{c}">{c[:5]}.</th>' for c in CATEGORIES])
         rows   = ""
         for ch in channels:
-            cats = cat_data.get(ch, {c: 0 for c in CATEGORIES})
+            cats  = cat_data.get(ch, {c: 0 for c in CATEGORIES})
             total = sum(cats.values()) or 1
             cells = ""
             for cat in CATEGORIES:
                 n   = int(cats.get(cat, 0))
                 pct = n / total
-                if pct == 0:     bg, fg, fw = "#080810","#222","400"
-                elif pct < 0.15: bg, fg, fw = CAT_COLORS[cat]+"33","#9ca3af","400"
-                elif pct < 0.30: bg, fg, fw = CAT_COLORS[cat]+"66","#e2e8f0","600"
-                else:            bg, fg, fw = CAT_COLORS[cat]+"cc","#ffffff","700"
+                if pct == 0:     bg, fg, fw = "transparent","var(--border)","400"
+                elif pct < 0.15: bg, fg, fw = CAT_COLORS[cat]+"22","var(--text-muted)","400"
+                elif pct < 0.30: bg, fg, fw = CAT_COLORS[cat]+"55","var(--text)","600"
+                else:            bg, fg, fw = CAT_COLORS[cat]+"99","var(--text)","700"
                 cells += f'<td style="background:{bg};color:{fg};font-weight:{fw};">{n if n else ""}</td>'
             is_toi = ch == TOI_USERNAME
-            nc = "#5b7bfc" if is_toi else "#e2e8f0"
+            nc  = "var(--accent)" if is_toi else "var(--text)"
             fw2 = "700" if is_toi else "400"
             rows += f'<tr><td style="color:{nc};font-weight:{fw2};white-space:nowrap;">{"⭐ " if is_toi else ""}@{ch}</td>{cells}</tr>'
-
-        legend = "".join([f'<span class="cat-pill" style="background:{CAT_COLORS[c]}33;color:{CAT_COLORS[c]};border:1px solid {CAT_COLORS[c]}55;">{c}</span>' for c in CATEGORIES])
-        st.markdown(f'<div style="background:#0f0f1a;border:1px solid #2a2a4a;border-radius:12px;padding:4px;overflow-x:auto;"><table class="heatmap-tbl"><thead><tr><th>Channel</th>{header}</tr></thead><tbody>{rows}</tbody></table></div><div style="margin-top:10px;">{legend}</div><div style="color:#6b7280;font-size:11px;margin-top:6px;">Numbers = estimated posts per category. Darker = higher share. ⭐ = TOI</div>', unsafe_allow_html=True)
+        legend = "".join([f'<span class="cat-pill" style="background:{CAT_COLORS[c]}22;color:{CAT_COLORS[c]};border:1px solid {CAT_COLORS[c]}55;">{c}</span>' for c in CATEGORIES])
+        st.markdown(f'<div style="background:var(--bg-card2);border:1px solid var(--border2);border-radius:12px;padding:4px;overflow-x:auto;"><table class="heatmap-tbl"><thead><tr><th>Channel</th>{header}</tr></thead><tbody>{rows}</tbody></table></div><div style="margin-top:10px;">{legend}</div><div style="color:var(--text-muted);font-size:11px;margin-top:6px;">Numbers = estimated posts per category. Darker = higher share. ⭐ = TOI</div>', unsafe_allow_html=True)
     else:
         st.markdown(f'<div class="ai-box"><div class="ai-box-title">📊 Category Breakdown</div><div class="ai-box-body">{cat_raw}</div></div>', unsafe_allow_html=True)
 
-    # ── HASHTAGS + ACTION PLAN ────────────────────────────────────────────
+    # HASHTAGS + ACTION PLAN
     st.markdown("<br>", unsafe_allow_html=True)
     col_h, col_a = st.columns(2)
     with col_h:
         tags = [t.strip() for t in S.get("HASHTAGS","").splitlines() if t.strip().startswith("#")]
         if tags:
-            pills = "".join([f'<span class="cat-pill" style="background:#1a1a3a;color:#a78bfa;border:1px solid #3a3a6a;">{t}</span>' for t in tags])
+            pills = "".join([f'<span class="cat-pill" style="background:var(--accent-light);color:var(--accent);border:1px solid var(--accent);">{t}</span>' for t in tags])
             st.markdown(f'<div class="ai-box"><div class="ai-box-title">#️⃣ Hashtags for TOI Today</div><div style="margin-top:8px;line-height:2.4;">{pills}</div></div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="ai-box"><div class="ai-box-title">#️⃣ Hashtags for TOI Today</div><div class="ai-box-body">{S.get("HASHTAGS","")}</div></div>', unsafe_allow_html=True)
     with col_a:
         actions = [l.strip() for l in S.get("ACTION_PLAN","").splitlines() if l.strip()]
         if actions:
-            items = "".join([f'<div style="color:#e2e8f0;font-size:13px;padding:6px 0;border-bottom:1px solid #1a1a2a;">{a}</div>' for a in actions])
+            items = "".join([f'<div style="color:var(--text);font-size:13px;padding:6px 0;border-bottom:1px solid var(--border);">{a}</div>' for a in actions])
             st.markdown(f'<div class="ai-box"><div class="ai-box-title">💡 Action Plan for TOI</div>{items}</div>', unsafe_allow_html=True)
         else:
             st.markdown(f'<div class="ai-box"><div class="ai-box-title">💡 Action Plan for TOI</div><div class="ai-box-body">{S.get("ACTION_PLAN","")}</div></div>', unsafe_allow_html=True)
 
-    # ── CHANNEL STATS ─────────────────────────────────────────────────────
+    # CHANNEL STATS
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 📋 Channel Stats (Today)")
     cs = tdf.groupby("username").agg(posts=("likes","count"), likes=("likes","sum"), comments=("comments","sum")).reset_index()
@@ -546,18 +741,20 @@ def render_ai_insights(df):
     for i, row in cs.iterrows():
         is_toi = row["username"] == TOI_USERNAME
         with cols[i % 3]:
-            st.markdown(f"""<div class="stat-card" style="text-align:left;margin-bottom:16px;border-color:{'#5b7bfc' if is_toi else '#1f1f3a'};">
-                <div style="color:{'#5b7bfc' if is_toi else '#a78bfa'};font-weight:700;font-size:14px;margin-bottom:10px;">{'⭐ ' if is_toi else ''}@{row['username']}</div>
+            bc = "var(--accent)" if is_toi else "var(--border)"
+            nc = "var(--accent)" if is_toi else "var(--accent2)"
+            st.markdown(f"""<div class="stat-card" style="text-align:left;margin-bottom:16px;border-color:{bc};">
+                <div style="color:{nc};font-weight:700;font-size:14px;margin-bottom:10px;">{'⭐ ' if is_toi else ''}@{row['username']}</div>
                 <div style="display:flex;gap:16px;flex-wrap:wrap;">
-                    <div><div class="stat-label">Posts</div><div style="color:#fff;font-weight:600;">{row['posts']}</div></div>
-                    <div><div class="stat-label">Likes</div><div style="color:#fff;font-weight:600;">{format_number(row['likes'])}</div></div>
-                    <div><div class="stat-label">Comments</div><div style="color:#fff;font-weight:600;">{format_number(row['comments'])}</div></div>
-                    <div><div class="stat-label">Avg Likes</div><div style="color:#fff;font-weight:600;">{format_number(row['avg_likes'])}</div></div>
+                    <div><div class="stat-label">Posts</div><div style="color:var(--text);font-weight:600;">{row['posts']}</div></div>
+                    <div><div class="stat-label">Likes</div><div style="color:var(--text);font-weight:600;">{format_number(row['likes'])}</div></div>
+                    <div><div class="stat-label">Comments</div><div style="color:var(--text);font-weight:600;">{format_number(row['comments'])}</div></div>
+                    <div><div class="stat-label">Avg Likes</div><div style="color:var(--text);font-weight:600;">{format_number(row['avg_likes'])}</div></div>
                 </div></div>""", unsafe_allow_html=True)
 
-# ===========================================================================
-# VIEWS — unchanged
-# ===========================================================================
+# ============================================================
+# VIEWS
+# ============================================================
 def render_accounts(df):
     start, end = render_date_filter(df, page_key="accounts")
     df = filter_by_date(df, start, end)
@@ -567,14 +764,14 @@ def render_accounts(df):
     stats = stats.sort_values('total_likes', ascending=False).reset_index(drop=True)
     st.markdown("""<style>
     div[data-testid="stHorizontalBlock"] .stButton > button {
-        background-color: #0f0f0f !important; border: 1px solid #1f1f1f !important;
+        background-color: var(--bg-card) !important; border: 1px solid var(--border) !important;
         border-radius: 12px !important; padding: 20px !important; text-align: left !important;
         height: auto !important; min-height: 80px !important; white-space: normal !important;
-        line-height: 1.5 !important; color: #ffffff !important; font-size: 15px !important;
+        line-height: 1.5 !important; color: var(--text) !important; font-size: 15px !important;
         font-weight: 500 !important; transition: all 0.2s ease !important; }
     div[data-testid="stHorizontalBlock"] .stButton > button:hover {
-        border-color: #5b7bfc !important; background-color: #121212 !important;
-        transform: translateY(-2px) !important; box-shadow: 0 8px 16px rgba(91,123,252,0.15) !important; }
+        border-color: var(--accent) !important; background-color: var(--accent-light) !important;
+        transform: translateY(-2px) !important; box-shadow: 0 8px 16px rgba(79,110,247,0.15) !important; }
     </style>""", unsafe_allow_html=True)
     cols = st.columns(3)
     for idx, row in stats.iterrows():
@@ -590,7 +787,7 @@ def render_accounts(df):
             with lc:
                 st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
                 if logo_path: st.image(logo_path, width=56)
-                else: st.markdown(f'<div style="width:52px;height:52px;border-radius:8px;background:#1a1a2e;display:flex;align-items:center;justify-content:center;border:1px solid #2a2a2a;color:#5b7bfc;font-size:22px;font-weight:700;">{row["username"][0].upper()}</div>', unsafe_allow_html=True)
+                else: st.markdown(f'<div style="width:52px;height:52px;border-radius:8px;background:var(--accent-light);display:flex;align-items:center;justify-content:center;border:1px solid var(--border);color:var(--accent);font-size:22px;font-weight:700;">{row["username"][0].upper()}</div>', unsafe_allow_html=True)
 
 def render_account_detail(df, username):
     start, end = render_date_filter(df, page_key="account_detail")
@@ -704,14 +901,19 @@ def render_top_posts(df):
                 st.metric("💬", f"{row['comments']:,}")
         st.markdown("---")
 
+# ============================================================
+# AUTH
+# ============================================================
 APP_PASSWORD = "TOI@1234"
 
 def check_auth():
     if st.session_state.get('authenticated'): return True
     st.markdown("""<style>
-    .login-wrap { max-width:380px; margin:120px auto 0 auto; background:#0f0f0f; border:1px solid #1f1f1f; border-radius:16px; padding:40px 36px; text-align:center; }
-    .login-title { color:#5b7bfc; font-size:26px; font-weight:700; margin-bottom:6px; }
-    .login-sub { color:#6b7280; font-size:14px; margin-bottom:28px; }
+    .login-wrap { max-width:380px; margin:120px auto 0 auto; background:var(--bg-card);
+        border:1px solid var(--border); border-radius:16px; padding:40px 36px; text-align:center;
+        box-shadow: 0 4px 24px rgba(79,110,247,0.10); }
+    .login-title { color:var(--accent); font-size:26px; font-weight:700; margin-bottom:6px; }
+    .login-sub { color:var(--text-muted); font-size:14px; margin-bottom:28px; }
     </style>""", unsafe_allow_html=True)
     st.markdown('<div class="login-wrap"><div class="login-title">🔐 Instagram Analytics</div><div class="login-sub">Enter password to continue</div></div>', unsafe_allow_html=True)
     _, center, _ = st.columns([1, 2, 1])
@@ -725,6 +927,9 @@ def check_auth():
                 st.error("❌ Incorrect password. Try again.")
     return False
 
+# ============================================================
+# MAIN
+# ============================================================
 def main():
     apply_styles()
     if not check_auth(): st.stop()
@@ -737,8 +942,8 @@ def main():
         df = preprocess(df)
 
     with st.sidebar:
-        st.markdown(f'<div style="color:#5b7bfc;font-size:20px;font-weight:700;margin-bottom:2px;">{APP_TITLE}</div>', unsafe_allow_html=True)
-        st.markdown(f'<div style="color:#6b7280;font-size:12px;margin-bottom:16px;">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="color:var(--accent);font-size:20px;font-weight:700;margin-bottom:2px;">{APP_TITLE}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="color:var(--text-muted);font-size:12px;margin-bottom:16px;">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
         st.markdown(f'<div class="last-updated">🕒 Last scraped: {get_last_scrape_time()}</div>', unsafe_allow_html=True)
         if st.button("🚀 Run Scraper Now", use_container_width=True):
             with st.spinner("Triggering scraper..."):
@@ -777,11 +982,11 @@ def main():
     st.markdown(f'<div class="main-subtitle">{APP_SUBTITLE}</div>', unsafe_allow_html=True)
 
     p = st.session_state['page']
-    if p == 'accounts':        render_accounts(fdf)
+    if p == 'accounts':         render_accounts(fdf)
     elif p == 'account_detail': render_account_detail(fdf, st.session_state['selected_account'])
-    elif p == 'analytics':     render_analytics(fdf)
-    elif p == 'top_posts':     render_top_posts(fdf)
-    elif p == 'ai_insights':   render_ai_insights(fdf)
+    elif p == 'analytics':      render_analytics(fdf)
+    elif p == 'top_posts':      render_top_posts(fdf)
+    elif p == 'ai_insights':    render_ai_insights(fdf)
 
 if __name__ == "__main__":
     main()
