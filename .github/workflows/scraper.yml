@@ -1,9 +1,25 @@
 name: Instagram Scraper
 on:
   schedule:
-    - cron: '30 3 * * *'
-    - cron: '30 7 * * *'
-    - cron: '30 11 * * *'
+    # Every 1 hour from 8am to 7pm IST (2:30am - 1:30pm UTC)
+    - cron: '30 2 * * *'   # 8:00am IST
+    - cron: '30 3 * * *'   # 9:00am IST
+    - cron: '30 4 * * *'   # 10:00am IST
+    - cron: '30 5 * * *'   # 11:00am IST
+    - cron: '30 6 * * *'   # 12:00pm IST
+    - cron: '30 7 * * *'   # 1:00pm IST
+    - cron: '30 8 * * *'   # 2:00pm IST
+    - cron: '30 9 * * *'   # 3:00pm IST
+    - cron: '30 10 * * *'  # 4:00pm IST
+    - cron: '30 11 * * *'  # 5:00pm IST
+    - cron: '30 12 * * *'  # 6:00pm IST
+    - cron: '30 13 * * *'  # 7:00pm IST
+    # Every 2 hours after 7pm IST (1:30pm UTC onwards)
+    - cron: '30 15 * * *'  # 9:00pm IST
+    - cron: '30 17 * * *'  # 11:00pm IST
+    - cron: '30 19 * * *'  # 1:00am IST (next day)
+    - cron: '30 21 * * *'  # 3:00am IST (next day)
+    - cron: '30 23 * * *'  # 5:00am IST (next day)
   workflow_dispatch:
 jobs:
   scrape:
@@ -16,14 +32,10 @@ jobs:
       - name: Install dependencies
         run: |
           pip install --upgrade pip
-          pip install scrapfly-sdk
           pip install -r requirements.txt --no-cache-dir
-
       - name: Run scraper
         env:
           SCRAPFLY_KEY: ${{ secrets.SCRAPFLY_KEY }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
-        run: |
-          /opt/hostedtoolcache/Python/3.11.15/x64/bin/pip install scrapfly-sdk
-          python supa.py
+        run: python supa.py
