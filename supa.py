@@ -26,7 +26,17 @@ IST = timezone(timedelta(hours=5, minutes=30))
 # Hardcoded user_ids — no scrape credit wasted resolving these
 TARGET_ACCOUNTS = [
     {"username": "indiatoday",       "user_id": "1542430186",  "followers": 6800000},
-
+    {"username": "hindustantimes",   "user_id": "1072450671",  "followers": 5200000},
+    {"username": "andtv",            "user_id": "176062718",   "followers": 7100000},
+    {"username": "ndtvindia",        "user_id": "31254711281", "followers": 4500000},
+    {"username": "news24official",   "user_id": "5433640349",  "followers": 1200000},
+    {"username": "timesnow",         "user_id": "573878215",   "followers": 3800000},
+    {"username": "abpnewstv",        "user_id": "1412650800",  "followers": 2900000},
+    {"username": "brut.india",       "user_id": "8012421289",  "followers": 9200000},
+    {"username": "timesofindia",     "user_id": "1691326988",  "followers": 8400000},
+    {"username": "ani_trending",     "user_id": "8712374554",  "followers": 1500000},
+    {"username": "bbcnews",          "user_id": "16278726",    "followers": 11000000},
+    {"username": "freepressjournal", "user_id": "3179979830",  "followers": 180000},
 ]
 
 # =============================
