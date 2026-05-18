@@ -71,14 +71,21 @@ def upload_image(image_url, post_code):
         resp = httpx.get(image_url, timeout=10, follow_redirects=True)
         if resp.status_code != 200:
             return image_url
-
-        supabase.storage.from_("post-images").upload(
-            path=filename,
-            file=resp.content,
-            file_options={"content-type": "image/jpeg", "upsert": "true"}
+         
+        result = supabase.storage.from_("post-images").upload(
+              path=filename,
+              file=resp.content,
+              file_options={"content-type": "image/jpeg", "upsert": "true"}
         )
 
-        return supabase.storage.from_("post-images").get_public_url(filename)
+        if isinstance(result, dict) and result.get("error"):
+             print(f"  Upload error: {result['error']}")
+             return image_url
+
+        public_url = supabase.storage.from_("post-images").get_public_url(filename)
+        if isinstance(public_url, dict):
+                return public_url.get("publicUrl", image_url)
+        return public_url
 
     except Exception as e:
         print(f"  Image upload failed for {post_code}: {e}")
