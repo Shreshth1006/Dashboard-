@@ -12,6 +12,13 @@ const APP_TITLE = "Instagram Analytics";
 const APP_SUBTITLE = "Channel Performance Dashboard";
 const TOI_USERNAME = "timesofindia";
 
+// TEMP: login disabled — everyone gets this identity until login is restored
+const DEFAULT_USER = {
+  user_name: "TOI Team",
+  user_email: "team@toi.com",
+  user_password: "",
+};
+
 const CATEGORIES = [
   "Politics","Crime","Entertainment","Sports","Business",
   "International","Technology","Health","Lifestyle","Viral/Human Interest",
@@ -29,10 +36,6 @@ function formatNumber(num) {
   if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
   if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
   return String(Math.floor(num));
-}
-
-function toDateStr(d) {
-  return d instanceof Date ? d.toISOString().slice(0, 10) : String(d);
 }
 
 function parseDate(s) {
@@ -59,10 +62,6 @@ function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
 
-function getFirstName(email) {
-  return (email || "").split(".")[0].split("@")[0];
-}
-
 // ─── Supabase helpers ─────────────────────────────────────────────────────────
 async function fetchPosts() {
   const { data, error } = await supabase
@@ -77,7 +76,7 @@ async function fetchPosts() {
 async function fetchLastScrapeTime() {
   try {
     const { data } = await supabase
-      .table("posts")
+      .from("posts")
       .select("scraped_time")
       .order("scraped_time", { ascending: false })
       .limit(1);
@@ -88,20 +87,8 @@ async function fetchLastScrapeTime() {
   return "Unknown";
 }
 
-async function loginUser(email, password) {
-  const { data, error } = await supabase
-    .from("dashboard_users")
-    .select("*")
-    .eq("user_email", email.trim().toLowerCase())
-    .eq("user_password", password)
-    .single();
-  if (error || !data) return null;
-  return data;
-}
-
 // ─── Session / presence ───────────────────────────────────────────────────────
 async function upsertSession(user) {
-  // Update last_seen if row exists, insert if not — email is unique key
   const { error } = await supabase.from("active_sessions")
     .upsert({
       user_email: user.user_email,
@@ -116,7 +103,6 @@ async function removeSession(email) {
 }
 
 async function fetchActiveSessions() {
-  // Active = last_seen within last 3 minutes
   const cutoff = new Date(Date.now() - 3 * 60 * 1000).toISOString();
   const { data, error } = await supabase
     .from("active_sessions")
@@ -169,7 +155,6 @@ function buildPayload(rows) {
 
   const platforms = {};
   const toiCaps = new Set();
-
   const grouped = {};
   for (const row of trows) {
     const u = row.username;
@@ -350,277 +335,83 @@ function parseCategoryBreakdown(text, channels) {
 // ─── CSS ──────────────────────────────────────────────────────────────────────
 const GLOBAL_CSS = `
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Syne:wght@600;700;800&display=swap');
-
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg:           #f5f6fa;
-    --bg2:          #ffffff;
-    --bg3:          #f0f1f7;
-    --bg4:          #e8eaf6;
-    --border:       #e2e4ef;
-    --border2:      #c9ccdf;
-    --text:         #111827;
-    --text-muted:   #6b7280;
-    --text-subtle:  #9ca3af;
-    --accent:       #4f6ef7;
-    --accent2:      #7c5cfc;
-    --accent-glow:  rgba(79,110,247,0.10);
-    --danger:       #ef4444;
-    --success:      #16a34a;
-    --warning:      #d97706;
-    --sidebar-w:    240px;
-    --radius:       12px;
-    --font-display: 'Syne', sans-serif;
-    --font-body:    'DM Sans', sans-serif;
+    --bg: #f5f6fa; --bg2: #ffffff; --bg3: #f0f1f7; --bg4: #e8eaf6;
+    --border: #e2e4ef; --border2: #c9ccdf; --text: #111827;
+    --text-muted: #6b7280; --text-subtle: #9ca3af;
+    --accent: #4f6ef7; --accent2: #7c5cfc; --accent-glow: rgba(79,110,247,0.10);
+    --danger: #ef4444; --success: #16a34a; --warning: #d97706;
+    --sidebar-w: 240px; --radius: 12px;
+    --font-display: 'Syne', sans-serif; --font-body: 'DM Sans', sans-serif;
   }
-
-  html, body, #root {
-    height: 100%;
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--font-body);
-    font-size: 14px;
-    line-height: 1.6;
-  }
-
+  html, body, #root { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-body); font-size: 14px; line-height: 1.6; }
   ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: var(--bg3); }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 4px; }
-
-  .online-section {
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 10px; padding: 10px 12px; margin-bottom: 4px;
-  }
-  .online-title {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.7px; color: var(--text-muted); margin-bottom: 8px;
-    display: flex; align-items: center; gap: 6px;
-  }
+  .online-section { background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; margin-bottom: 4px; }
+  .online-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.7px; color: var(--text-muted); margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
   .online-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--success); display: inline-block; animation: pulse 2s infinite; }
-  .online-user {
-    display: flex; align-items: center; gap: 7px;
-    font-size: 12px; color: var(--text); padding: 3px 0;
-  }
-  .online-avatar {
-    width: 20px; height: 20px; border-radius: 5px;
-    background: var(--accent-glow); border: 1px solid var(--border2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700; color: var(--accent); flex-shrink: 0;
-  }
+  .online-user { display: flex; align-items: center; gap: 7px; font-size: 12px; color: var(--text); padding: 3px 0; }
+  .online-avatar { width: 20px; height: 20px; border-radius: 5px; background: var(--accent-glow); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
   .online-you { font-size: 10px; color: var(--accent); font-weight: 600; margin-left: auto; }
-  .scraper-busy-warn {
-    font-size: 11px; color: var(--warning);
-    background: #fffbeb; border: 1px solid #fde68a;
-    border-radius: 8px; padding: 7px 10px; margin-bottom: 4px; line-height: 1.5;
-  }
-  @keyframes pulse {
-    0%, 100% { opacity: 1; } 50% { opacity: 0.4; }
-  }
-
+  .scraper-busy-warn { font-size: 11px; color: var(--warning); background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 7px 10px; margin-bottom: 4px; line-height: 1.5; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
   a { color: var(--accent); text-decoration: none; }
   a:hover { text-decoration: underline; }
-
-  /* Layout */
   .app-shell { display: flex; height: 100vh; overflow: hidden; }
-
-  .sidebar {
-    width: var(--sidebar-w);
-    min-width: var(--sidebar-w);
-    background: var(--bg2);
-    border-right: 1px solid var(--border);
-    display: flex;
-    flex-direction: column;
-    padding: 24px 16px;
-    gap: 4px;
-    overflow-y: auto;
-  }
-
+  .sidebar { width: var(--sidebar-w); min-width: var(--sidebar-w); background: var(--bg2); border-right: 1px solid var(--border); display: flex; flex-direction: column; padding: 24px 16px; gap: 4px; overflow-y: auto; }
   .sidebar-brand { margin-bottom: 20px; padding: 0 8px; }
-  .sidebar-brand h1 {
-    font-family: var(--font-display);
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--accent);
-    letter-spacing: -0.3px;
-  }
+  .sidebar-brand h1 { font-family: var(--font-display); font-size: 18px; font-weight: 800; color: var(--accent); letter-spacing: -0.3px; }
   .sidebar-brand p { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-  .last-scraped {
-    font-size: 11px; color: var(--text-muted);
-    padding: 6px 8px;
-    background: var(--bg3);
-    border-radius: 8px;
-    margin-bottom: 8px;
-  }
-
-  .nav-btn {
-    display: flex; align-items: center; gap: 10px;
-    width: 100%; padding: 10px 12px;
-    background: transparent; border: none; border-radius: 10px;
-    color: var(--text-muted); font-family: var(--font-body);
-    font-size: 13.5px; font-weight: 500;
-    cursor: pointer; transition: all 0.15s;
-    text-align: left;
-  }
+  .last-scraped { font-size: 11px; color: var(--text-muted); padding: 6px 8px; background: var(--bg3); border-radius: 8px; margin-bottom: 8px; }
+  .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px; background: transparent; border: none; border-radius: 10px; color: var(--text-muted); font-family: var(--font-body); font-size: 13.5px; font-weight: 500; cursor: pointer; transition: all 0.15s; text-align: left; }
   .nav-btn:hover { background: var(--bg3); color: var(--text); }
   .nav-btn.active { background: var(--accent-glow); color: var(--accent); }
   .nav-btn .icon { font-size: 16px; width: 20px; text-align: center; }
-
   .sidebar-divider { height: 1px; background: var(--border); margin: 8px 0; }
-
-  .action-btn {
-    width: 100%; padding: 9px 12px;
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 10px; color: var(--text);
-    font-family: var(--font-body); font-size: 13px; font-weight: 500;
-    cursor: pointer; transition: all 0.15s;
-    display: flex; align-items: center; justify-content: center; gap: 6px;
-  }
+  .action-btn { width: 100%; padding: 9px 12px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: var(--font-body); font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; justify-content: center; gap: 6px; }
   .action-btn:hover { border-color: var(--accent); color: var(--accent); }
   .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
-  .channel-filter-label {
-    font-size: 11px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: 0.8px; color: var(--text-muted);
-    padding: 0 8px; margin: 4px 0;
-  }
-
+  .channel-filter-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: var(--text-muted); padding: 0 8px; margin: 4px 0; }
   .filter-row { display: flex; gap: 6px; margin-bottom: 6px; }
-  .filter-row button {
-    flex: 1; padding: 5px 0;
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 7px; color: var(--text-muted);
-    font-size: 11px; cursor: pointer; transition: all 0.15s;
-    font-family: var(--font-body);
-  }
+  .filter-row button { flex: 1; padding: 5px 0; background: var(--bg3); border: 1px solid var(--border); border-radius: 7px; color: var(--text-muted); font-size: 11px; cursor: pointer; transition: all 0.15s; font-family: var(--font-body); }
   .filter-row button:hover { border-color: var(--accent); color: var(--accent); }
-
   .channel-list { display: flex; flex-direction: column; gap: 3px; }
-  .channel-chip {
-    display: flex; align-items: center; gap: 8px;
-    padding: 5px 8px; border-radius: 7px;
-    cursor: pointer; transition: background 0.12s;
-    font-size: 12px; color: var(--text-muted);
-  }
+  .channel-chip { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 7px; cursor: pointer; transition: background 0.12s; font-size: 12px; color: var(--text-muted); }
   .channel-chip:hover { background: var(--bg3); }
   .channel-chip.selected { color: var(--text); }
-  .channel-chip .ch-dot {
-    width: 22px; height: 22px; border-radius: 6px;
-    background: var(--accent-glow); border: 1px solid var(--border2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 10px; font-weight: 700; color: var(--accent);
-    flex-shrink: 0;
-  }
+  .channel-chip .ch-dot { width: 22px; height: 22px; border-radius: 6px; background: var(--accent-glow); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: var(--accent); flex-shrink: 0; }
   .channel-chip input[type=checkbox] { accent-color: var(--accent); }
-
-  /* Main content */
-  .main-content {
-    flex: 1; overflow-y: auto; padding: 32px 36px;
-    background: var(--bg);
-  }
-
+  .main-content { flex: 1; overflow-y: auto; padding: 32px 36px; background: var(--bg); }
   .page-header { margin-bottom: 28px; }
-  .page-title {
-    font-family: var(--font-display);
-    font-size: 28px; font-weight: 800;
-    color: var(--text); letter-spacing: -0.5px;
-  }
+  .page-title { font-family: var(--font-display); font-size: 28px; font-weight: 800; color: var(--text); letter-spacing: -0.5px; }
   .page-subtitle { font-size: 13px; color: var(--text-muted); margin-top: 4px; }
-
-  /* Metrics row */
   .metrics-row { display: grid; gap: 16px; margin-bottom: 28px; }
   .metrics-row.cols-4 { grid-template-columns: repeat(4, 1fr); }
   .metrics-row.cols-3 { grid-template-columns: repeat(3, 1fr); }
-
-  .metric-card {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 18px 20px;
-  }
+  .metric-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 20px; }
   .metric-label { font-size: 12px; color: var(--text-muted); font-weight: 500; margin-bottom: 6px; }
   .metric-value { font-size: 26px; font-weight: 700; color: var(--text); font-family: var(--font-display); }
-
-  /* Date filter bar */
-  .date-bar {
-    display: flex; align-items: center; gap: 12px;
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 12px 18px;
-    margin-bottom: 24px; flex-wrap: wrap;
-  }
+  .date-bar { display: flex; align-items: center; gap: 12px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 18px; margin-bottom: 24px; flex-wrap: wrap; }
   .date-bar-label { font-size: 12px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
-  .date-bar input[type=date] {
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); padding: 6px 10px;
-    font-family: var(--font-body); font-size: 13px;
-    color-scheme: dark;
-  }
+  .date-bar input[type=date] { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 6px 10px; font-family: var(--font-body); font-size: 13px; color-scheme: dark; }
   .date-bar-arrow { color: var(--text-muted); }
-  .date-bar .reset-btn {
-    margin-left: auto; padding: 6px 14px;
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text-muted);
-    font-size: 12px; cursor: pointer; font-family: var(--font-body);
-    transition: all 0.15s;
-  }
+  .date-bar .reset-btn { margin-left: auto; padding: 6px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 12px; cursor: pointer; font-family: var(--font-body); transition: all 0.15s; }
   .date-bar .reset-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* Stat card */
-  .stat-card {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px 18px;
-    text-align: center;
-  }
+  .stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 18px; text-align: center; }
   .stat-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 4px; }
   .stat-value { font-size: 20px; font-weight: 700; color: var(--text); }
-
-  /* Section title */
-  .section-title {
-    font-family: var(--font-display);
-    font-size: 20px; font-weight: 700;
-    color: var(--text); margin: 32px 0 20px;
-    letter-spacing: -0.3px;
-  }
-
-  /* Table */
+  .section-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text); margin: 32px 0 20px; letter-spacing: -0.3px; }
   .data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  .data-table th {
-    background: var(--bg3); color: var(--text-muted);
-    padding: 10px 14px; text-align: left;
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 0.6px; border-bottom: 1px solid var(--border2);
-    white-space: nowrap;
-  }
-  .data-table td {
-    padding: 10px 14px; border-bottom: 1px solid var(--border);
-    color: var(--text); vertical-align: top;
-  }
+  .data-table th { background: var(--bg3); color: var(--text-muted); padding: 10px 14px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 1px solid var(--border2); white-space: nowrap; }
+  .data-table td { padding: 10px 14px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; }
   .data-table tr:hover td { background: var(--bg2); }
-  .table-wrap {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden; overflow-x: auto;
-    margin-bottom: 24px;
-  }
-
-  /* Post card */
-  .post-card {
-    display: grid; grid-template-columns: 80px 1fr 120px;
-    gap: 16px; align-items: start;
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px;
-    margin-bottom: 12px; transition: border-color 0.15s;
-  }
+  .table-wrap { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; overflow-x: auto; margin-bottom: 24px; }
+  .post-card { display: grid; grid-template-columns: 80px 1fr 120px; gap: 16px; align-items: start; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; transition: border-color 0.15s; }
   .post-card:hover { border-color: var(--border2); }
-  .post-thumb {
-    width: 80px; height: 80px; object-fit: cover;
-    border-radius: 8px; border: 1px solid var(--border);
-  }
-  .post-thumb-placeholder {
-    width: 80px; height: 80px;
-    background: var(--bg3); border-radius: 8px;
-    border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center;
-    color: var(--text-subtle); font-size: 24px;
-  }
+  .post-thumb { width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid var(--border); }
+  .post-thumb-placeholder { width: 80px; height: 80px; background: var(--bg3); border-radius: 8px; border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; color: var(--text-subtle); font-size: 24px; }
   .post-username { font-size: 12px; font-weight: 700; color: var(--accent); margin-bottom: 4px; }
   .post-caption { font-size: 13px; color: var(--text); line-height: 1.5; margin-bottom: 6px; }
   .post-time { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
@@ -629,183 +420,48 @@ const GLOBAL_CSS = `
   .post-stat { background: var(--bg3); border-radius: 8px; padding: 8px 12px; text-align: center; }
   .post-stat-icon { font-size: 14px; }
   .post-stat-val { font-size: 14px; font-weight: 700; color: var(--text); }
-
-  /* Account cards */
   .account-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .account-card {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 20px;
-    cursor: pointer; transition: all 0.15s;
-    display: flex; align-items: center; gap: 14px;
-  }
-  .account-card:hover {
-    border-color: var(--accent); transform: translateY(-2px);
-    box-shadow: 0 8px 20px rgba(108,140,255,0.1);
-  }
-  .account-avatar {
-    width: 44px; height: 44px; border-radius: 10px;
-    background: var(--accent-glow); border: 1px solid var(--border2);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px; font-weight: 800; color: var(--accent);
-    flex-shrink: 0; font-family: var(--font-display);
-  }
+  .account-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; cursor: pointer; transition: all 0.15s; display: flex; align-items: center; gap: 14px; }
+  .account-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(108,140,255,0.1); }
+  .account-avatar { width: 44px; height: 44px; border-radius: 10px; background: var(--accent-glow); border: 1px solid var(--border2); display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 800; color: var(--accent); flex-shrink: 0; font-family: var(--font-display); }
   .account-name { font-size: 13px; font-weight: 700; color: var(--text); }
   .account-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
-
-  /* AI section */
-  .ai-badge {
-    display: inline-flex; align-items: center; gap: 6px;
-    background: var(--accent-glow); border: 1px solid var(--accent);
-    border-radius: 20px; padding: 4px 14px;
-    font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 20px;
-  }
-
-  .ai-box {
-    background: var(--bg2); border: 1px solid var(--border2);
-    border-radius: 14px; padding: 20px 22px; margin-bottom: 16px;
-    position: relative; overflow: hidden;
-  }
-  .ai-box::before {
-    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent));
-  }
-  .ai-box-title {
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    letter-spacing: 1.2px; color: var(--accent2); margin-bottom: 12px;
-  }
+  .ai-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-glow); border: 1px solid var(--accent); border-radius: 20px; padding: 4px 14px; font-size: 12px; color: var(--accent); font-weight: 600; margin-bottom: 20px; }
+  .ai-box { background: var(--bg2); border: 1px solid var(--border2); border-radius: 14px; padding: 20px 22px; margin-bottom: 16px; position: relative; overflow: hidden; }
+  .ai-box::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2), var(--accent)); }
+  .ai-box-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.2px; color: var(--accent2); margin-bottom: 12px; }
   .ai-box-body { font-size: 13px; color: var(--text); line-height: 1.8; }
-
   .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-
-  /* Heatmap */
   .heatmap-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .heatmap-tbl th {
-    background: var(--bg3); color: var(--text-muted);
-    padding: 9px 6px; text-align: center;
-    font-size: 10px; font-weight: 700; text-transform: uppercase;
-    border-bottom: 1px solid var(--border2); white-space: nowrap;
-  }
+  .heatmap-tbl th { background: var(--bg3); color: var(--text-muted); padding: 9px 6px; text-align: center; font-size: 10px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid var(--border2); white-space: nowrap; }
   .heatmap-tbl th:first-child { text-align: left; min-width: 130px; padding-left: 12px; }
   .heatmap-tbl td { padding: 7px 6px; border-bottom: 1px solid var(--border); text-align: center; }
   .heatmap-tbl td:first-child { text-align: left; padding-left: 12px; }
   .heatmap-tbl tr:hover td { background: var(--bg2); }
-
-  /* Cat pills */
-  .cat-pill {
-    display: inline-block; padding: 3px 10px;
-    border-radius: 10px; font-size: 11px; font-weight: 600; margin: 3px;
-  }
-
-  /* Hashtag pills */
-  .tag-pill {
-    display: inline-block; padding: 4px 12px;
-    background: var(--accent-glow); border: 1px solid var(--accent);
-    border-radius: 20px; font-size: 12px; color: var(--accent);
-    font-weight: 600; margin: 3px;
-  }
-
-  /* Action list */
-  .action-item {
-    padding: 8px 0; border-bottom: 1px solid var(--border);
-    font-size: 13px; color: var(--text);
-  }
+  .cat-pill { display: inline-block; padding: 3px 10px; border-radius: 10px; font-size: 11px; font-weight: 600; margin: 3px; }
+  .tag-pill { display: inline-block; padding: 4px 12px; background: var(--accent-glow); border: 1px solid var(--accent); border-radius: 20px; font-size: 12px; color: var(--accent); font-weight: 600; margin: 3px; }
+  .action-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 13px; color: var(--text); }
   .action-item:last-child { border-bottom: none; }
-
-  /* Channel stat cards */
   .ch-stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 24px; }
-  .ch-stat-card {
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 14px 16px;
-  }
+  .ch-stat-card { background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; }
   .ch-stat-card.toi { border-color: var(--accent); }
   .ch-stat-name { font-size: 13px; font-weight: 700; color: var(--accent2); margin-bottom: 8px; }
   .ch-stat-name.toi { color: var(--accent); }
   .ch-stat-row { display: flex; gap: 16px; flex-wrap: wrap; }
   .ch-stat-item .stat-label { font-size: 11px; color: var(--text-muted); }
   .ch-stat-item .stat-num { font-size: 14px; font-weight: 600; color: var(--text); }
-
-  /* Login */
-  .login-page {
-    min-height: 100vh; display: flex; align-items: center;
-    justify-content: center; background: var(--bg);
-  }
-  .login-card {
-    width: 380px; background: var(--bg2);
-    border: 1px solid var(--border); border-radius: 20px;
-    padding: 40px 36px; text-align: center;
-    box-shadow: 0 8px 40px rgba(108,140,255,0.08);
-  }
-  .login-title {
-    font-family: var(--font-display); font-size: 26px;
-    font-weight: 800; color: var(--accent); margin-bottom: 6px;
-  }
-  .login-sub { font-size: 13px; color: var(--text-muted); margin-bottom: 28px; }
-  .login-field {
-    width: 100%; padding: 11px 14px;
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 10px; color: var(--text);
-    font-family: var(--font-body); font-size: 14px;
-    margin-bottom: 12px; outline: none; transition: border-color 0.15s;
-  }
-  .login-field:focus { border-color: var(--accent); }
-  .login-btn {
-    width: 100%; padding: 12px;
-    background: var(--accent); border: none;
-    border-radius: 10px; color: #fff;
-    font-family: var(--font-display); font-size: 15px; font-weight: 700;
-    cursor: pointer; transition: opacity 0.15s; margin-top: 4px;
-  }
-  .login-btn:hover { opacity: 0.9; }
-  .login-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-  .login-error { font-size: 13px; color: var(--danger); margin-top: 10px; }
-
-  /* Toast */
-  .toast {
-    position: fixed; bottom: 24px; right: 24px;
-    padding: 12px 18px; border-radius: 10px;
-    font-size: 13px; font-weight: 500;
-    z-index: 1000; animation: fadeInUp 0.2s ease;
-    max-width: 320px;
-  }
+  .toast { position: fixed; bottom: 24px; right: 24px; padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; z-index: 1000; animation: fadeInUp 0.2s ease; max-width: 320px; }
   .toast.success { background: #1a3a1a; border: 1px solid var(--success); color: var(--success); }
   .toast.error { background: #3a1a1a; border: 1px solid var(--danger); color: var(--danger); }
-  @keyframes fadeInUp {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* Guest lock */
-  .guest-lock {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; gap: 12px;
-    padding: 60px 40px; text-align: center;
-    background: var(--bg2); border: 1px solid var(--border);
-    border-radius: 16px; margin-top: 20px;
-  }
+  @keyframes fadeInUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+  .guest-lock { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 60px 40px; text-align: center; background: var(--bg2); border: 1px solid var(--border); border-radius: 16px; margin-top: 20px; }
   .guest-lock-icon { font-size: 40px; }
   .guest-lock-title { font-family: var(--font-display); font-size: 20px; font-weight: 700; color: var(--text); }
   .guest-lock-sub { font-size: 13px; color: var(--text-muted); }
-
-  /* Select */
-  select {
-    background: var(--bg3); border: 1px solid var(--border);
-    border-radius: 8px; color: var(--text); padding: 7px 10px;
-    font-family: var(--font-body); font-size: 13px; outline: none;
-    cursor: pointer;
-  }
-
-  /* Spinner */
+  select { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 7px 10px; font-family: var(--font-body); font-size: 13px; outline: none; cursor: pointer; }
   .spinner-wrap { display: flex; align-items: center; justify-content: center; padding: 60px; gap: 12px; }
-  .spinner {
-    width: 24px; height: 24px;
-    border: 3px solid var(--border2);
-    border-top-color: var(--accent);
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-  }
+  .spinner { width: 24px; height: 24px; border: 3px solid var(--border2); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
-
-  /* Bar chart */
   .bar-chart-wrap { overflow-x: auto; }
   .bar-chart { display: flex; flex-direction: column; gap: 8px; }
   .bar-row { display: flex; align-items: center; gap: 10px; }
@@ -813,46 +469,14 @@ const GLOBAL_CSS = `
   .bar-track { flex: 1; height: 20px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
   .bar-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width 0.5s ease; }
   .bar-val { font-size: 12px; color: var(--text-muted); width: 60px; }
-
-  /* Pie chart substitute */
-  .pie-legend { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-  .pie-legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-muted); }
-  .pie-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-
-  /* Missed table */
   .missed-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .missed-table th {
-    background: var(--bg3); color: var(--text-muted);
-    padding: 9px 12px; text-align: left;
-    font-size: 11px; font-weight: 700; text-transform: uppercase;
-    border-bottom: 1px solid var(--border2);
-  }
-  .missed-table td {
-    padding: 10px 12px; border-bottom: 1px solid var(--border);
-    color: var(--text); vertical-align: top; line-height: 1.6;
-  }
+  .missed-table th { background: var(--bg3); color: var(--text-muted); padding: 9px 12px; text-align: left; font-size: 11px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid var(--border2); }
+  .missed-table td { padding: 10px 12px; border-bottom: 1px solid var(--border); color: var(--text); vertical-align: top; line-height: 1.6; }
   .missed-table tr:hover td { background: var(--bg2); }
-
-  /* Back btn */
-  .back-btn {
-    display: inline-flex; align-items: center; gap: 6px;
-    padding: 7px 14px; background: var(--bg3);
-    border: 1px solid var(--border); border-radius: 8px;
-    color: var(--text-muted); font-size: 13px;
-    cursor: pointer; transition: all 0.15s; font-family: var(--font-body);
-    margin-bottom: 20px;
-  }
+  .back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text-muted); font-size: 13px; cursor: pointer; transition: all 0.15s; font-family: var(--font-body); margin-bottom: 20px; }
   .back-btn:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* Rerun btn */
-  .rerun-btn {
-    padding: 8px 16px; background: var(--bg3);
-    border: 1px solid var(--border); border-radius: 8px;
-    color: var(--text); font-size: 13px; cursor: pointer;
-    transition: all 0.15s; font-family: var(--font-body);
-  }
+  .rerun-btn { padding: 8px 16px; background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; cursor: pointer; transition: all 0.15s; font-family: var(--font-body); }
   .rerun-btn:hover { border-color: var(--accent); color: var(--accent); }
-
   @media (max-width: 900px) {
     .metrics-row.cols-4 { grid-template-columns: repeat(2, 1fr); }
     .account-grid { grid-template-columns: repeat(2, 1fr); }
@@ -878,19 +502,6 @@ function Spinner({ label }) {
     <div className="spinner-wrap">
       <div className="spinner" />
       <span style={{ color: "var(--text-muted)", fontSize: 13 }}>{label || "Loading..."}</span>
-    </div>
-  );
-}
-
-function GuestLock() {
-  return (
-    <div className="guest-lock">
-      <div className="guest-lock-icon">🔒</div>
-      <div className="guest-lock-title">Members Only</div>
-      <div className="guest-lock-sub">
-        Please login with your TOI account to access this feature.<br />
-        Contact your admin to become a member.
-      </div>
     </div>
   );
 }
@@ -1215,7 +826,7 @@ function AnalyticsPage({ rows }) {
   );
 }
 
-function AIInsightsPage({ rows, isGuest }) {
+function AIInsightsPage({ rows }) {
   const [analysis, setAnalysis] = useState(null);
   const [loading, setLoading]   = useState(false);
   const [error, setError]       = useState(null);
@@ -1252,15 +863,8 @@ function AIInsightsPage({ rows, isGuest }) {
   }, [rows, thisKey]);
 
   useEffect(() => {
-    if (!isGuest && !analysis && !loading) runAnalysis();
+    if (!analysis && !loading) runAnalysis();
   }, []);
-
-  if (isGuest) return (
-    <div>
-      <div className="page-header"><div className="page-title">AI Insights</div></div>
-      <GuestLock />
-    </div>
-  );
 
   const totalLikes    = trows.reduce((s,r) => s+(Number(r.likes)||0), 0);
   const totalComments = trows.reduce((s,r) => s+(Number(r.comments)||0), 0);
@@ -1512,51 +1116,6 @@ function ChannelStatsToday({ trows }) {
   );
 }
 
-// ─── Login ────────────────────────────────────────────────────────────────────
-
-function LoginPage({ onLogin }) {
-  const [email, setEmail]     = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError]     = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async () => {
-    if (!email || !password) { setError("Please enter email and password."); return; }
-    setLoading(true);
-    setError("");
-    const user = await loginUser(email, password);
-    setLoading(false);
-    if (user) {
-      onLogin(user);
-    } else {
-      setError("❌ Incorrect email or password. Try again.");
-    }
-  };
-
-  const handleKey = e => { if (e.key === "Enter") handleSubmit(); };
-
-  return (
-    <div className="login-page">
-      <div className="login-card">
-        <div className="login-title">🔐 Instagram Analytics</div>
-        <div className="login-sub">Channel Performance Dashboard</div>
-        <input
-          className="login-field" type="email" placeholder="Email address"
-          value={email} onChange={e => setEmail(e.target.value)} onKeyDown={handleKey}
-        />
-        <input
-          className="login-field" type="password" placeholder="Password"
-          value={password} onChange={e => setPassword(e.target.value)} onKeyDown={handleKey}
-        />
-        <button className="login-btn" onClick={handleSubmit} disabled={loading}>
-          {loading ? "Signing in…" : "Login"}
-        </button>
-        {error && <div className="login-error">{error}</div>}
-      </div>
-    </div>
-  );
-}
-
 // ─── App Shell ────────────────────────────────────────────────────────────────
 
 const NAV = [
@@ -1567,9 +1126,12 @@ const NAV = [
 ];
 
 export default function App() {
-  const [user, setUser]           = useState(() => {
-    try { const u = localStorage.getItem("toi_user"); return u ? JSON.parse(u) : null; } catch { return null; }
-  });
+  // TEMP: login gate disabled — everyone is auto-authenticated as DEFAULT_USER.
+  // To restore login later: bring back the LoginPage component + loginUser()
+  // function from the previous version, reinstate the
+  // `if (!user) return <LoginPage onLogin={...} />` check, and read/write
+  // `user` from localStorage instead of this fixed constant.
+  const [user]                    = useState(DEFAULT_USER);
   const [page, setPage]           = useState("top_posts");
   const [selectedAccount, setSelectedAccount] = useState(null);
   const [rows, setRows]           = useState([]);
@@ -1581,24 +1143,10 @@ export default function App() {
   const [scraperBusy, setScraperBusy] = useState(false);
   const [onlineUsers, setOnlineUsers] = useState([]);
 
-  const isGuest = user?.user_email === "guest@toi.com";
-
   const showToast = (message, type = "success") => setToast({ message, type });
-
-  const handleLogin = (u) => {
-    localStorage.setItem("toi_user", JSON.stringify(u));
-    setUser(u);
-  };
-
-  const handleLogout = () => {
-    if (user) removeSession(user.user_email);
-    localStorage.removeItem("toi_user");
-    setUser(null);
-  };
 
   // Load data
   useEffect(() => {
-    if (!user) return;
     (async () => {
       setLoading(true);
       try {
@@ -1621,11 +1169,10 @@ export default function App() {
       const t = await fetchLastScrapeTime();
       setLastScrape(t);
     })();
-  }, [user]);
+  }, []);
 
   // Session heartbeat — ping every 60s, poll online users every 30s
   useEffect(() => {
-    if (!user) return;
     upsertSession(user);
     const heartbeat = setInterval(() => upsertSession(user), 60000);
     const poll = setInterval(async () => {
@@ -1638,21 +1185,15 @@ export default function App() {
       clearInterval(poll);
       removeSession(user.user_email);
     };
-  }, [user]);
-
-  
+  }, []);
 
   const filteredRows = rows.filter(r => selChannels.includes(r.username));
-  const otherActiveUsers = onlineUsers.filter(u => u.user_email !== user?.user_email);
+  const otherActiveUsers = onlineUsers.filter(u => u.user_email !== user.user_email);
   const scraperWarning = otherActiveUsers.length > 0
     ? `⚠️ ${otherActiveUsers.map(u => u.user_name.split(" ")[0]).join(", ")} ${otherActiveUsers.length === 1 ? "is" : "are"} also online.`
     : null;
 
   const handleRunScraper = async () => {
-    if (isGuest) {
-      showToast("Members only feature. Please login with your TOI account.", "error");
-      return;
-    }
     setScraperBusy(true);
     const { ok, msg } = await triggerScraper();
     showToast(msg, ok ? "success" : "error");
@@ -1683,13 +1224,6 @@ export default function App() {
     setLastScrape(t);
   };
 
-  if (!user) return (
-    <>
-      <style>{GLOBAL_CSS}</style>
-      <LoginPage onLogin={handleLogin} />
-    </>
-  );
-
   const navigate = (p) => {
     setPage(p);
     if (p !== "account_detail") setSelectedAccount(null);
@@ -1718,12 +1252,12 @@ export default function App() {
               <div key={u.user_email} className="online-user">
                 <div className="online-avatar">{u.user_name[0].toUpperCase()}</div>
                 <span>{u.user_name.split(" ")[0]}</span>
-                {u.user_email === user?.user_email && <span className="online-you">you</span>}
+                {u.user_email === user.user_email && <span className="online-you">you</span>}
               </div>
             ))}
           </div>
 
-          {scraperWarning && !isGuest && (
+          {scraperWarning && (
             <div className="scraper-busy-warn">{scraperWarning} Coordinate before running scraper.</div>
           )}
 
@@ -1731,11 +1265,8 @@ export default function App() {
             className="action-btn"
             onClick={handleRunScraper}
             disabled={scraperBusy}
-            style={isGuest ? { opacity: 0.7 } : {}}
-            title={isGuest ? "Members only" : ""}
           >
             {scraperBusy ? "⏳ Triggering…" : "🚀 Run Scraper Now"}
-            {isGuest && <span style={{ fontSize: 12, color: "var(--text-muted)" }}> 🔒</span>}
           </button>
 
           <div className="sidebar-divider" />
@@ -1748,7 +1279,6 @@ export default function App() {
             >
               <span className="icon">{icon}</span>
               {label}
-              {id === "ai_insights" && isGuest && <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>🔒</span>}
             </button>
           ))}
 
@@ -1785,11 +1315,7 @@ export default function App() {
             <div style={{ fontSize: 11, color: "var(--text-muted)", padding: "0 8px", marginBottom: 6 }}>
               Logged in as<br />
               <span style={{ color: "var(--text)", fontWeight: 600 }}>{user.user_name}</span>
-              {isGuest && <span style={{ color: "var(--warning)", fontSize: 10, marginLeft: 4 }}>(Guest)</span>}
             </div>
-            <button className="action-btn" onClick={handleLogout} style={{ fontSize: 12 }}>
-              🚪 Logout
-            </button>
           </div>
         </aside>
 
@@ -1803,7 +1329,7 @@ export default function App() {
                 {page === "accounts"       && <AccountsPage rows={filteredRows} onSelectAccount={u => { setSelectedAccount(u); setPage("account_detail"); }} />}
                 {page === "account_detail" && selectedAccount && <AccountDetailPage rows={filteredRows} username={selectedAccount} onBack={() => navigate("accounts")} />}
                 {page === "analytics"      && <AnalyticsPage rows={filteredRows} />}
-                {page === "ai_insights"    && <AIInsightsPage rows={filteredRows} isGuest={isGuest} />}
+                {page === "ai_insights"    && <AIInsightsPage rows={filteredRows} />}
               </>
             )
           }
