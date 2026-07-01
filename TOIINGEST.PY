@@ -3,32 +3,23 @@ import re
 import json
 import time
 import random
+import httpx
 from datetime import datetime, timezone, timedelta
 from scrapfly import ScrapflyClient, ScrapeConfig
-from supabase import create_client
 from dotenv import load_dotenv
 load_dotenv()
-
-print("DEBUG — SUPABASE_URL:", os.getenv("SUPABASE_URL"))
-print("DEBUG — SUPABASE_KEY starts with:", os.getenv("SUPABASE_KEY")[:15] if os.getenv("SUPABASE_KEY") else "MISSING")
 
 # =============================
 # CONFIGURATION
 # =============================
 
 SCRAPFLY_KEY = os.getenv("SCRAPFLY_KEY")
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+TOI_INGEST_URL = "http://prod-np-services-k8.timesofindia.com/cfs-utility/analytics/ingest"
 
-client   = ScrapflyClient(key=SCRAPFLY_KEY)
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-SUPABASE_MAX_RETRIES = 3
-SUPABASE_RETRY_DELAY = 5
+client = ScrapflyClient(key=SCRAPFLY_KEY)
 
 IST = timezone(timedelta(hours=5, minutes=30))
 
-# Hardcoded user_ids — no scrape credit wasted resolving these
 TARGET_ACCOUNTS = [
     {"username": "indiatoday",       "user_id": "1542430186",  "followers": 6800000},
     {"username": "hindustantimes",   "user_id": "1072450671",  "followers": 5200000},
@@ -46,8 +37,8 @@ TARGET_ACCOUNTS = [
 
 # =============================
 # SCRAPING CONTROLS
-# ============================
-MAX_PAGES_PER_ACCOUNT = 1
+# =============================
+MAX_PAGES_PER_ACCOUNT = 3
 MIN_DELAY             = 3.0
 MAX_DELAY             = 6.0
 ACCOUNT_DELAY_MIN     = 6
@@ -61,23 +52,6 @@ BASE_HEADERS = {
     "Accept": "application/json, text/plain, */*",
     "Referer": "https://www.instagram.com/",
 }
-
-def with_retry(fn, label, max_retries=SUPABASE_MAX_RETRIES, delay=SUPABASE_RETRY_DELAY):
-    """
-    Retries transient Supabase/network failures (DNS blips, SSL reads,
-    connection resets) instead of dropping the whole operation on one bad attempt.
-    """
-    for attempt in range(1, max_retries + 1):
-        try:
-            return fn()
-        except Exception as e:
-            if attempt < max_retries:
-                wait = delay * attempt
-                print(f"  {label} attempt {attempt} failed: {e} → retry in {wait}s")
-                time.sleep(wait)
-            else:
-                print(f"  {label} failed after {max_retries} attempts: {e}")
-                return None
 
 # =============================
 # HELPERS
@@ -95,18 +69,11 @@ def get_caption(item):
         return ""
 
 def scrape_url(url):
-    """
-    FIX: asp=True enables Scrapfly's Anti-Scraping Protection bypass.
-    Instagram requires this — without it, requests get 401'd by IG's
-    bot detection regardless of account, which is exactly the pattern
-    seen in the failed runs (every account, every retry, same 401).
-    """
     for attempt in range(1, MAX_RETRIES + 1):
         try:
             result = client.scrape(ScrapeConfig(
                 url=url,
-                asp=True,
-                country="IN",
+                asp=False,
                 headers=BASE_HEADERS,
             ))
             return json.loads(result.content)
@@ -120,7 +87,7 @@ def scrape_url(url):
                 return None
 
 # =============================
-# SCRAPE FEED (no user_id lookup needed)
+# SCRAPE FEED
 # =============================
 
 def get_posts_for_account(account, scraped_time):
@@ -171,12 +138,7 @@ def get_posts_for_account(account, scraped_time):
                 continue
 
             caption = get_caption(item)
-            # FIX: use Instagram's CDN URL directly instead of re-downloading
-            # and re-uploading to Supabase Storage every run. This was the
-            # main driver of quota exhaustion — same images were being
-            # re-uploaded repeatedly across runs within the 24h window.
-            # Tradeoff: these signed CDN URLs expire after some time, so
-            # older rows may eventually show broken images.
+            # Use raw CDN URL directly — no Supabase Storage upload
             media_url = item.get('image_versions2', {}).get('candidates', [{}])[0].get('url', '')
 
             posts_collected.append({
@@ -184,12 +146,12 @@ def get_posts_for_account(account, scraped_time):
                 "followers":    followers,
                 "post_link":    f"https://www.instagram.com/p/{post_code}/",
                 "media_url":    media_url,
-                "post_time":    post_time.isoformat(),
+                "post_time":    post_time.strftime("%Y-%m-%dT%H:%M:%S.000+0000"),
                 "caption":      caption,
                 "hashtags":     extract_hashtags(caption),
                 "likes":        item.get('like_count', 0),
                 "comments":     item.get('comment_count', 0),
-                "scraped_time": scraped_time,
+                "scraped_time": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000+0000"),
             })
 
         if oldest_on_page and oldest_on_page < cutoff:
@@ -212,37 +174,30 @@ def get_posts_for_account(account, scraped_time):
 # =============================
 
 def get_all_posts():
-    scraped_time = datetime.now(IST).isoformat()
-    print(f"Scraped time: {scraped_time}\n")
-
+    print(f"Run started at: {datetime.now(IST).isoformat()}\n")
     all_data = []
-    failed_accounts = []
 
     for i, account in enumerate(TARGET_ACCOUNTS):
         print(f"\n[{i+1}/{len(TARGET_ACCOUNTS)}] ", end="")
-
         try:
-            posts = get_posts_for_account(account, scraped_time)
+            posts = get_posts_for_account(account, None)  # scraped_time now set per-post in UTC
             all_data.extend(posts)
             print(f"  Collected {len(posts)} posts")
-            if len(posts) == 0:
-                failed_accounts.append(account["username"])
         except Exception as e:
             print(f"  Skipped: {e}")
-            failed_accounts.append(account["username"])
 
         if i < len(TARGET_ACCOUNTS) - 1:
             delay = random.uniform(ACCOUNT_DELAY_MIN, ACCOUNT_DELAY_MAX)
             print(f"  Waiting {delay:.1f}s...")
             time.sleep(delay)
 
-    return all_data, failed_accounts
+    return all_data
 
 # =============================
-# SUPABASE PUSH
+# PUSH TO TOI INTERNAL API
 # =============================
 
-def push_to_supabase(posts):
+def push_to_toi_api(posts):
     if not posts:
         print("No posts to push.")
         return
@@ -250,28 +205,19 @@ def push_to_supabase(posts):
     BATCH_SIZE = 50
     for i in range(0, len(posts), BATCH_SIZE):
         batch = posts[i:i + BATCH_SIZE]
-        result = with_retry(
-            lambda: supabase.table("posts").upsert(batch, on_conflict="post_link").execute(),
-            label=f"Insert batch {i//BATCH_SIZE + 1}"
-        )
-        if result is not None:
-            print(f"  Batch {i//BATCH_SIZE + 1} pushed ({len(batch)} rows)")
-        else:
-            print(f"  Batch {i//BATCH_SIZE + 1} LOST — {len(batch)} rows not saved")
-
-# =============================
-# CLEANUP OLD DATA (keeps rolling 24h window, prevents unbounded growth)
-# =============================
-
-def cleanup_old_data():
-    cutoff = (datetime.now(IST) - timedelta(hours=24)).isoformat()
-    result = with_retry(
-        lambda: supabase.table("posts").delete().lt("post_time", cutoff).execute(),
-        label="Cleanup"
-    )
-    if result is not None:
-        deleted = len(result.data) if result.data else 0
-        print(f"  Cleanup: removed {deleted} rows older than 24h")
+        try:
+            response = httpx.post(
+                TOI_INGEST_URL,
+                json=batch,
+                headers={"Content-Type": "application/json"},
+                timeout=30,
+            )
+            if response.status_code == 200:
+                print(f"  Batch {i//BATCH_SIZE + 1} pushed OK ({len(batch)} rows) — {response.status_code}")
+            else:
+                print(f"  Batch {i//BATCH_SIZE + 1} failed — HTTP {response.status_code}: {response.text[:200]}")
+        except Exception as e:
+            print(f"  Push error (batch {i//BATCH_SIZE + 1}): {e}")
 
 # =============================
 # MAIN
@@ -279,19 +225,10 @@ def cleanup_old_data():
 
 def main():
     print("Starting scrape...\n")
-    posts, failed_accounts = get_all_posts()
-    print(f"\nTotal posts: {len(posts)}")
-    push_to_supabase(posts)
-    cleanup_old_data()
+    posts = get_all_posts()
+    print(f"\nTotal posts collected: {len(posts)}")
+    push_to_toi_api(posts)
     print("Done.")
-
-    # FIX: don't let a zero-post run report success silently.
-    # Previous runs hit 401 on every account, collected 0 posts,
-    # and GitHub Actions still showed green.
-    if len(posts) == 0:
-        raise SystemExit("FAILED: 0 posts collected across all accounts — check ASP/auth issues")
-    if failed_accounts:
-        print(f"WARNING: these accounts returned 0 posts: {', '.join(failed_accounts)}")
 
 if __name__ == "__main__":
     main()
